@@ -1068,8 +1068,8 @@
   let cashChart = null;
 
   function renderCharts(rows, horizonIdx){
-    const slice = rows.slice(0, horizonIdx + 1); 
-    const labels = slice.map(r=> r.month);
+    const doesAvail = slice.map(r=> r.breedingDoes);
+const capacityDoes = slice.map(r=> r.activeBucks * N("doesPerBuck"));
 
     // Chart 1: composition stacked
     const breedingDoes = slice.map(r=> r.breedingDoes);
@@ -1083,12 +1083,12 @@
       type: "line",
       data: {
         labels,
-        datasets: [
-          { label:"Breeding does", data: breedingDoes, borderWidth: 2, pointRadius: 0, tension: 0.25, fill: true, stack: "herd" },
-          { label:"Young females (not breedable)", data: youngFemales, borderWidth: 2, pointRadius: 0, tension: 0.25, fill: true, stack: "herd" },
-          { label:"Active bucks", data: activeBucks, borderWidth: 2, pointRadius: 0, tension: 0.25, fill: true, stack: "herd" },
-          { label:"Young males (not active)", data: youngMales, borderWidth: 2, pointRadius: 0, tension: 0.25, fill: true, stack: "herd" }
-        ]
+        datasets: [datasets: [
+  { label:"Breeding does", data: breedingDoes, borderWidth: 2, pointRadius: 0, tension: 0.25, fill: true, stack: "herd" },
+  { label:"Young females (not breedable)", data: youngFemales, borderWidth: 2, pointRadius: 0, tension: 0.25, fill: true, stack: "herd" },
+  { label:"Active bucks", data: activeBucks, borderWidth: 2, pointRadius: 0, tension: 0.25, fill: true, stack: "herd" },
+  { label:"Young males (not active)", data: youngMales, borderWidth: 2, pointRadius: 0, tension: 0.25, fill: true, stack: "herd" }
+]]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
