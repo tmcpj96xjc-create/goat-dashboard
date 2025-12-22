@@ -28,11 +28,14 @@
     @media(max-width:900px){.grid{grid-template-columns:1fr}}
     .row{display:grid;grid-template-columns:1.25fr 1fr;gap:12px;align-items:center;margin:10px 0}
     label{font-weight:800}
-    input,select,button,details{
+    input,select,button,details,textarea{
       width:100%;padding:10px 10px;border-radius:12px;border:1px solid var(--line);
       background:#fff;color:var(--ink);font-size:1rem
     }
     button{cursor:pointer;font-weight:900}
+    button.secondary{font-weight:850;background:#fff}
+    .btnRow{display:flex;gap:10px;flex-wrap:wrap}
+    .btnRow button{width:auto;min-width:160px}
     .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
     .tabBtn{width:auto;padding:8px 10px}
     .tabBtn.active{outline:2px solid rgba(0,0,0,.18)}
@@ -50,22 +53,22 @@
     .bad{background:var(--bad);border-color:rgba(180,0,0,.35)}
     hr{border:none;border-top:1px solid var(--line);margin:12px 0}
 
-    /* fixed chart height (no “growing down”) */
+    /* fixed chart height */
     .canvasBox{margin-top:10px}
     canvas{
       display:block;width:100% !important;height:280px !important;max-height:280px !important;
       background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px
     }
 
-    /* tooltip helper (hover explanations) */
+    /* tooltip helper */
     .tip{position:relative;display:inline-block;border-bottom:1px dotted rgba(0,0,0,.35);cursor:help}
     .tip::after{
       content:attr(data-tip);
       position:absolute;left:0;top:120%;
-      min-width:220px;max-width:360px;
+      min-width:220px;max-width:380px;
       background:#111;color:#fff;
       padding:10px;border-radius:10px;
-      font-weight:600;font-size:0.85rem;line-height:1.35;
+      font-weight:650;font-size:0.85rem;line-height:1.35;
       opacity:0;pointer-events:none;transform:translateY(-6px);
       transition:opacity .12s ease, transform .12s ease;
       z-index:10;
@@ -75,15 +78,28 @@
     .tip:hover::after{opacity:1;transform:translateY(0)}
     details summary{cursor:pointer;font-weight:900}
     details .small{margin-top:8px}
+
+    /* Run button spinner */
+    .runWrap{position:relative;display:inline-flex;align-items:center;gap:10px}
+    .spinner{
+      width:18px;height:18px;border-radius:999px;
+      border:3px solid rgba(0,0,0,.18);
+      border-top-color: rgba(0,0,0,.7);
+      animation: spin .8s linear infinite;
+      display:none;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .isRunning .spinner{display:inline-block}
+    .isRunning button{opacity:.75;pointer-events:none}
+
+    /* read-only export box (optional) */
+    .exportBox{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:.85rem;min-height:120px}
   </style>
 </head>
 
 <body>
 <div class="wrap">
-  <h1>
-    Goat Farm Planner
-    <span class="small">— reach your target herd size + money planning + snapshot</span>
-  </h1>
+  <h1>Goat Farm Planner <span class="small">— reach your target + purchases planning + money + snapshot</span></h1>
 
   <!-- Global controls -->
   <div class="card">
@@ -114,10 +130,7 @@
         </div>
 
         <div class="row">
-          <label>
-            Font size
-            <span class="tip" data-tip="Just changes readability. Doesn’t affect the model.">?</span>
-          </label>
+          <label>Font size</label>
           <input id="fontSize" type="range" min="14" max="22" value="16" />
         </div>
       </div>
@@ -126,7 +139,7 @@
         <div class="row">
           <label>
             Monte Carlo
-            <span class="tip" data-tip="If ON, we run many randomized simulations (only biology varies) to estimate confidence + P50/P90 time-to-target. Prices are NOT randomized.">?</span>
+            <span class="tip" data-tip="If ON, we run many randomized simulations (biology varies) to estimate confidence + P50/P90 time-to-target. Prices are NOT randomized.">?</span>
           </label>
           <select id="mcOn">
             <option value="on">On</option>
@@ -135,23 +148,25 @@
         </div>
 
         <div class="row">
-          <label>
-            Monte Carlo runs
-            <span class="tip" data-tip="More runs = smoother confidence results. 150–300 is usually enough.">?</span>
-          </label>
+          <label>Monte Carlo runs</label>
           <input id="mcRuns" type="number" value="200" min="50" step="50"/>
         </div>
 
         <div class="row">
-          <label>
-            Currency label
-          </label>
+          <label>Currency label</label>
           <input id="cur" value="UGX"/>
         </div>
 
-        <button id="runBtn">Run</button>
+        <div class="btnRow">
+          <div class="runWrap" id="runWrap">
+            <button id="runBtn">Run</button>
+            <span class="spinner" aria-hidden="true"></span>
+          </div>
+          <button class="secondary" id="copyBtn" title="Copies a clean analysis prompt + key results to your clipboard.">Copy analysis prompt</button>
+        </div>
+
         <div class="small" style="margin-top:8px">
-          Charts stay static until you click <b>Run</b>.
+          Spinner shows for <b>1.5s</b> so you can feel the “run”, then results render.
         </div>
       </div>
     </div>
@@ -175,7 +190,7 @@
           <div class="row">
             <label>
               Starting does (bought young)
-              <span class="tip" data-tip="Your starting animals are bought at ~3 months old. They become breeding-active after 5 months (around 8 months old).">?</span>
+              <span class="tip" data-tip="Starting animals are bought at ~3 months old. They become breeding-active after 5 months (around 8 months old).">?</span>
             </label>
             <input id="startDoes" type="number" value="4" min="0" />
           </div>
@@ -183,7 +198,7 @@
           <div class="row">
             <label>
               Starting bucks (bought young)
-              <span class="tip" data-tip="Starting bucks are also bought young and become breeding-active after 5 months (same as does).">?</span>
+              <span class="tip" data-tip="Starting bucks are also bought young and become breeding-active after 5 months.">?</span>
             </label>
             <input id="startBucks" type="number" value="1" min="0" />
           </div>
@@ -207,19 +222,27 @@
           <div class="row">
             <label>
               Total goats purchased (plan)
-              <span class="tip" data-tip="This KPI counts starting herd + all expansion purchases you planned (across the months below).">?</span>
+              <span class="tip" data-tip="Counts starting herd + your expansion purchases across the months listed on the right.">?</span>
             </label>
             <div class="banner small" id="p_totalKpi">—</div>
+          </div>
+
+          <div class="row">
+            <label>
+              Stop-buy recommendation
+              <span class="tip" data-tip="Earliest purchase month after which you can stop buying and still reach target by max months (given all other settings).">?</span>
+            </label>
+            <div class="banner small" id="p_stopBuy">—</div>
+          </div>
+
+          <div class="banner small">
+            Purchases months (edit quantities): <b>4, 8, 12, 16, 20, 24, 28</b>.<br/>
+            Purchased animals become breeding-active after <b>5 months</b>.
           </div>
         </div>
 
         <div>
-          <div class="banner small">
-            Purchase months (edit quantities): <b>4, 8, 12, 16, 20, 24, 28</b>.
-            <br/>Each purchase: <b>does / bucks</b>. Purchased animals become breeding-active after <b>5 months</b>.
-          </div>
-
-          <div style="margin-top:10px">
+          <div style="margin-top:4px">
             <div class="row">
               <label>Month 4: buy does / buy bucks</label>
               <div style="display:flex;gap:10px">
@@ -273,9 +296,7 @@
 
           <div class="canvasBox">
             <canvas id="chartHerd"></canvas>
-            <div class="small">
-              Herd composition (moved under Purchases as requested). Whole numbers only.
-            </div>
+            <div class="small">Herd composition (whole numbers). Chart 1 is under Purchases as requested.</div>
           </div>
         </div>
       </div>
@@ -300,7 +321,7 @@
           <div class="row">
             <label>
               Breeding success %
-              <span class="tip" data-tip="Chance a breeding attempt results in pregnancy (average).">?</span>
+              <span class="tip" data-tip="Base chance a breeding attempt results in pregnancy (average). Seasonality can reduce this in off-season months.">?</span>
             </label>
             <input id="breedSuccess" type="number" value="90" min="40" max="100"/>
           </div>
@@ -328,13 +349,41 @@
             </label>
             <input id="pctFemale" type="number" value="50" min="40" max="60"/>
           </div>
+
+          <hr/>
+
+          <b class="small">B) Seasonality (breeding)</b>
+          <div class="row">
+            <label>
+              Seasonality
+              <span class="tip" data-tip="If ON: breeding success is reduced in off-season months (months NOT listed as peak).">?</span>
+            </label>
+            <select id="seasonOn">
+              <option value="off">Off</option>
+              <option value="on">On</option>
+            </select>
+          </div>
+          <div class="row">
+            <label>
+              Peak months (1–12)
+              <span class="tip" data-tip="Comma list. Example: 2,3,4,5,6,7. These months have full breeding success. All other months are penalized.">?</span>
+            </label>
+            <input id="peakMonths" value="2,3,4,5,6,7" />
+          </div>
+          <div class="row">
+            <label>
+              Off-season penalty %
+              <span class="tip" data-tip="If seasonality is ON, breeding success is multiplied by (1 - penalty) in off-season months.">?</span>
+            </label>
+            <input id="seasonPenalty" type="number" value="15" min="0" max="60" />
+          </div>
         </div>
 
         <div>
           <div class="row">
             <label>
               First breeding age (months)
-              <span class="tip" data-tip="Retained female kids enter the breeding-doe pool at this age. Typical planning default: 9 months.">?</span>
+              <span class="tip" data-tip="Retained female kids enter the breeding-doe pool at this age. Default: 9 months.">?</span>
             </label>
             <input id="breedAge" type="number" value="9" min="8" max="12"/>
           </div>
@@ -391,8 +440,8 @@
       <div class="canvasBox">
         <canvas id="chartConstraint"></canvas>
         <div class="small">
-          Constraint chart: breedable does vs buck capacity. Includes a <b>buck count</b> line on a 2nd axis.
-          <span class="tip" data-tip="Buck capacity = active bucks × does-per-buck. If does exceed that, some does can’t be served, and growth slows.">What’s buck capacity?</span>
+          Constraint: breedable does vs buck capacity + bucks line (2nd axis).
+          <span class="tip" data-tip="Buck capacity = active bucks × does-per-buck. If does exceed that line, some does can’t be served and growth slows.">What’s buck capacity?</span>
         </div>
       </div>
     </div>
@@ -432,9 +481,53 @@
           <div class="row">
             <label>
               Startup cash runway (months)
-              <span class="tip" data-tip="Startup cash here is planned as costs for this many months, plus the starting herd purchase at month 0.">?</span>
+              <span class="tip" data-tip="Startup cash is planned as costs for this many months, plus the starting herd purchase at month 0.">?</span>
             </label>
             <input id="runwayMo" type="number" value="6" min="1" max="24"/>
+          </div>
+
+          <hr/>
+
+          <b class="small">C) Season toggles (costs + price)</b>
+          <div class="row">
+            <label>
+              Dry season cost bump
+              <span class="tip" data-tip="If ON: variable costs (feed/med/other) increase by this % in the months listed.">?</span>
+            </label>
+            <select id="dryOn">
+              <option value="off">Off</option>
+              <option value="on">On</option>
+            </select>
+          </div>
+          <div class="row">
+            <label>
+              Dry season months (1–12)
+              <span class="tip" data-tip="Comma list. Example: 6,7,8.">?</span>
+            </label>
+            <input id="dryMonths" value="6,7,8" />
+          </div>
+          <div class="row">
+            <label>Dry season increase %</label>
+            <input id="dryPct" type="number" value="20" min="0" max="100"/>
+          </div>
+
+          <div class="row">
+            <label>
+              Seasonal sale price change
+              <span class="tip" data-tip="If ON: sale prices (male + female breeding) are multiplied by (1 + % change) in those months.">?</span>
+            </label>
+            <select id="priceOn">
+              <option value="off">Off</option>
+              <option value="on">On</option>
+            </select>
+          </div>
+          <div class="row">
+            <label>Price season months (1–12)</label>
+            <input id="priceMonths" value="11,12" />
+          </div>
+          <div class="row">
+            <label>Sale price change % (bonus or drop)</label>
+            <input id="pricePct" type="number" value="10" min="-50" max="50"/>
           </div>
         </div>
 
@@ -465,16 +558,12 @@
 
       <div class="canvasBox">
         <canvas id="chartMonthlyRevCost"></canvas>
-        <div class="small">
-          Monthly revenue vs monthly all-in costs (operating + purchases). Whole numbers only.
-        </div>
+        <div class="small">Monthly revenue vs monthly all-in costs (operating + purchases). Whole numbers only.</div>
       </div>
 
       <div class="canvasBox">
         <canvas id="chartCumRevCost"></canvas>
-        <div class="small">
-          Cumulative revenue vs cumulative all-in costs (running totals by month). Whole numbers only.
-        </div>
+        <div class="small">Cumulative revenue vs cumulative all-in costs (running totals). Whole numbers only.</div>
       </div>
     </div>
   </div>
@@ -485,22 +574,10 @@
       <b class="small">Snapshot (funding-ready summary)</b>
 
       <div class="kpis" style="margin-top:12px">
-        <div class="kpi">
-          <small>Time to target (deterministic)</small>
-          <div class="v" id="s_det">—</div>
-        </div>
-        <div class="kpi">
-          <small>P50 time-to-target</small>
-          <div class="v" id="s_p50">—</div>
-        </div>
-        <div class="kpi">
-          <small>P90 time-to-target</small>
-          <div class="v" id="s_p90">—</div>
-        </div>
-        <div class="kpi">
-          <small>Target confidence by Month X</small>
-          <div class="v" id="s_conf">—</div>
-        </div>
+        <div class="kpi"><small>Time to target (deterministic)</small><div class="v" id="s_det">—</div></div>
+        <div class="kpi"><small>P50 time-to-target</small><div class="v" id="s_p50">—</div></div>
+        <div class="kpi"><small>P90 time-to-target</small><div class="v" id="s_p90">—</div></div>
+        <div class="kpi"><small>Target confidence by Month X</small><div class="v" id="s_conf">—</div></div>
       </div>
 
       <hr/>
@@ -525,9 +602,7 @@
 
       <div class="canvasBox">
         <canvas id="chartWaterfall"></canvas>
-        <div class="small">
-          Waterfall-style summary (stacked bars): Total Revenue vs Total Operating Costs vs Total Purchase Spend → Net.
-        </div>
+        <div class="small">Waterfall-style summary: Total Revenue vs Total Operating Costs vs Total Purchase Spend → Net.</div>
       </div>
 
       <details style="margin-top:12px">
@@ -552,7 +627,7 @@
 
           <b>Money assumptions</b>
           <ul>
-            <li>Variable cost per goat per month is constant (feed + medication + other).</li>
+            <li>Variable cost per goat per month is constant (feed + medication + other), with optional dry-season bump.</li>
             <li>Fixed costs are constant monthly (property/12 + labor + vet + security + transport + admin).</li>
             <li><b>Operating break-even:</b> Revenue ≥ Operating costs (excludes purchases).</li>
             <li><b>Farm break-even:</b> cumulative net cash ≥ 0 (includes purchases).</li>
@@ -566,6 +641,12 @@
           </ul>
         </div>
       </details>
+
+      <div class="card" style="margin-top:12px">
+        <b class="small">Export data for analysis</b>
+        <div class="small">Use the <b>Copy analysis prompt</b> button at the top. It includes your inputs + key outputs + monthly series (trimmed).</div>
+        <textarea id="exportPreview" class="exportBox" readonly placeholder="Click “Copy analysis prompt” to generate a clean analysis prompt here too."></textarea>
+      </div>
     </div>
   </div>
 
@@ -590,6 +671,7 @@ function moFmt(mo){
 $("fontSize").addEventListener("input", ()=> {
   document.documentElement.style.setProperty("--fs", $("fontSize").value + "px");
 });
+
 /* tabs */
 document.querySelectorAll(".tabBtn").forEach(b=>{
   b.onclick=()=>{
@@ -602,33 +684,31 @@ document.querySelectorAll(".tabBtn").forEach(b=>{
 
 /* ---------------- model constants ---------------- */
 const GEST = 5;          // months
-const PUR_MAT = 5;       // months (starting herd and purchased goats become active after this delay)
+const PUR_MAT = 5;       // months to become breeding-active (starting + purchased)
 const F_SALE_AGE = 6;    // months fixed (female breeding sale)
 
+/* ---------------- parsing month lists (1..12) ---------------- */
+function parseMonthSet(s){
+  return new Set((s||"").split(",").map(x=>parseInt(x.trim(),10)).filter(x=>x>=1 && x<=12));
+}
+
 /* ---------------- purchases schedule ---------------- */
+const PURCHASE_MONTHS = [4,8,12,16,20,24,28];
+
 function purchasePlanTotal(){
   const startD = N("startDoes"), startB = N("startBucks");
-  const months = [4,8,12,16,20,24,28];
   let f=0,m=0;
-  for(const mm of months){
+  for(const mm of PURCHASE_MONTHS){
     f += N(`p${mm}f`);
     m += N(`p${mm}m`);
   }
   return {startD,startB,f,m,total:startD+startB+f+m};
 }
+
 function purchaseForMonth(monthIdx){
-  // monthIdx is 0-based month counter. Purchases keyed by month number itself (4,8,...)
-  const monthNumber = monthIdx; // 0.. maxMonths
-  const map = new Map([
-    [4,  {f:N("p4f"),  m:N("p4m")}],
-    [8,  {f:N("p8f"),  m:N("p8m")}],
-    [12, {f:N("p12f"), m:N("p12m")}],
-    [16, {f:N("p16f"), m:N("p16m")}],
-    [20, {f:N("p20f"), m:N("p20m")}],
-    [24, {f:N("p24f"), m:N("p24m")}],
-    [28, {f:N("p28f"), m:N("p28m")}],
-  ]);
-  return map.get(monthNumber) || {f:0,m:0};
+  // monthIdx is simulation month number (0,1,2,...)
+  if(!PURCHASE_MONTHS.includes(monthIdx)) return {f:0,m:0};
+  return {f:N(`p${monthIdx}f`), m:N(`p${monthIdx}m`)};
 }
 
 /* ---------------- parameters ---------------- */
@@ -639,11 +719,9 @@ function getParams(){
     maxMonths: Math.max(24, N("maxMonths")),
     runwayMo: Math.max(1, N("runwayMo")),
 
-    // Starting herd (young; becomes active after PUR_MAT months)
     startDoes: Math.max(0, N("startDoes")),
     startBucks: Math.max(0, N("startBucks")),
 
-    // Growth
     kiddingInt: clamp(N("kiddingInt"),6,18),
     breedSuccess: clamp(N("breedSuccess"),40,100) / 100,
     kidsPerBirth: clamp(Number($("kidsPerBirth").value||1.8), 1, 3.5),
@@ -656,7 +734,6 @@ function getParams(){
     retainF: clamp(N("retainF"),0,100) / 100,
     maleSaleAge: clamp(N("maleSaleAge"),1,12),
 
-    // Money
     buyF: Math.max(0, N("buyF")),
     buyM: Math.max(0, N("buyM")),
     sellM: Math.max(0, N("sellM")),
@@ -673,56 +750,82 @@ function getParams(){
     trMo: Math.max(0, N("trMo")),
     adMo: Math.max(0, N("adMo")),
 
+    // B seasonality (breeding)
+    seasonOn: $("seasonOn").value,
+    peakMonths: $("peakMonths").value,
+    seasonPenalty: clamp(N("seasonPenalty"),0,60) / 100,
+
+    // C season toggles (costs + price)
+    dryOn: $("dryOn").value,
+    dryMonths: $("dryMonths").value,
+    dryPct: clamp(N("dryPct"),0,100) / 100,
+    priceOn: $("priceOn").value,
+    priceMonths: $("priceMonths").value,
+    pricePct: clamp(N("pricePct"),-50,50) / 100,
+
     mcOn: $("mcOn").value,
     mcRuns: Math.max(50, Math.floor(N("mcRuns")))
   };
+
   p.fixedMo = (p.propYr/12) + p.laborMo + p.vetMo + p.secMo + p.trMo + p.adMo;
   p.varPerGoatMo = p.feed + p.med + p.othVar;
+
+  // parsed month sets
+  p._peakSet = parseMonthSet(p.peakMonths);
+  p._drySet = parseMonthSet(p.dryMonths);
+  p._priceSet = parseMonthSet(p.priceMonths);
+
   return p;
 }
 
-/* ---------------- deterministic simulation (whole-number outputs) ----------------
-   We simulate in expected values but we DISPLAY whole numbers and chart whole numbers.
-*/
-function simulateDeterministic(p){
-  // Active breeders
-  let does = 0;
-  let bucks = 0;
+/* ---------------- season factors ---------------- */
+function breedingSeasonFactor(p, monthIdx){
+  if(p.seasonOn !== "on") return 1;
+  const mInYear = (monthIdx % 12) + 1;
+  const isPeak = p._peakSet.has(mInYear);
+  return isPeak ? 1 : (1 - p.seasonPenalty);
+}
+function costSeasonMultiplier(p, monthIdx){
+  if(p.dryOn !== "on") return 1;
+  const mInYear = (monthIdx % 12) + 1;
+  return p._drySet.has(mInYear) ? (1 + p.dryPct) : 1;
+}
+function priceSeasonMultiplier(p, monthIdx){
+  if(p.priceOn !== "on") return 1;
+  const mInYear = (monthIdx % 12) + 1;
+  return p._priceSet.has(mInYear) ? (1 + p.pricePct) : 1;
+}
 
-  // Starting herd pipelines (young -> active after PUR_MAT months)
+/* ---------------- deterministic simulation ----------------
+   Note: we simulate expected values but display whole numbers.
+*/
+function simulateDeterministic(p, purchaseOverrideFn=null){
+  let does = 0, bucks = 0;
+
+  // starting herd pipelines (young -> active after PUR_MAT months)
   let startDoesPipe = Array(PUR_MAT).fill(0);
   let startBucksPipe = Array(PUR_MAT).fill(0);
   startDoesPipe[0] = p.startDoes;
   startBucksPipe[0] = p.startBucks;
 
-  // Purchased pipelines (young -> active after PUR_MAT months)
+  // purchased pipelines (young -> active after PUR_MAT months)
   let pF = Array(PUR_MAT).fill(0);
   let pM = Array(PUR_MAT).fill(0);
 
-  // Retained female cohort to breeding age
+  // cohorts
   let fCoh = Array(Math.max(p.breedAge,1)).fill(0);
-
-  // Male cohort to sale age
   let mCoh = Array(Math.max(p.maleSaleAge,1)).fill(0);
-
-  // Female cohort to breeding-sale age (fixed 6 months)
   let fSaleCoh = Array(F_SALE_AGE).fill(0);
 
-  // Pregnancy queue (births after GEST months)
+  // pregnancy queue
   let pregQ = Array(GEST).fill(0);
 
-  // Money accumulators
-  let cumNet = 0;
-  let cumRev = 0;
-  let cumOpCost = 0;
-  let cumPurchSpend = 0;
+  // money accumulators
+  let cumNet = 0, cumRev = 0, cumOpCost = 0, cumPurchSpend = 0;
 
-  let opBE = null;     // first month rev >= op cost
-  let farmBE = null;   // first month cumNet >= 0
-  let selfSustain = null; // first month where op net >=0 for 6 consecutive months
+  let opBE = null, farmBE = null, selfSustain = null;
   let opNonNegStreak = 0;
 
-  // Record rows
   const rows = [];
 
   // Month 0 starting herd purchase spend (explicit)
@@ -731,96 +834,99 @@ function simulateDeterministic(p){
   cumPurchSpend += startSpend;
 
   for(let m=0; m<p.maxMonths; m++){
-    // Mature starting herd into active breeders
+    // mature starting herd into active breeders
     const sdTo = startDoesPipe[PUR_MAT-1] || 0;
     const sbTo = startBucksPipe[PUR_MAT-1] || 0;
     for(let i=PUR_MAT-1;i>=1;i--){ startDoesPipe[i]=startDoesPipe[i-1]; startBucksPipe[i]=startBucksPipe[i-1]; }
     startDoesPipe[0]=0; startBucksPipe[0]=0;
-    does += sdTo;
-    bucks += sbTo;
+    does += sdTo; bucks += sbTo;
 
-    // Mature purchased breeders into active breeders
+    // mature purchased into active
     const pfTo = pF[PUR_MAT-1] || 0;
     const pmTo = pM[PUR_MAT-1] || 0;
     for(let i=PUR_MAT-1;i>=1;i--){ pF[i]=pF[i-1]; pM[i]=pM[i-1]; }
     pF[0]=0; pM[0]=0;
-    does += pfTo;
-    bucks += pmTo;
+    does += pfTo; bucks += pmTo;
 
-    // Apply breeding doe loss (monthly)
+    // doe loss (monthly)
     const lossM = p.doeLossYr / 12;
     does = Math.max(0, does * (1 - lossM));
 
-    // Births from pregnancy queue
+    // births from queue
     const births = (pregQ[GEST-1] || 0) * p.kidsPerBirth * p.kidSurvival;
-    // Shift pregnancy queue
     for(let i=GEST-1;i>=1;i--) pregQ[i]=pregQ[i-1];
     pregQ[0]=0;
 
     const fBorn = births * p.pctFemale;
     const mBorn = births - fBorn;
 
-    // female split: retain vs sell for breeding (at 6 months)
+    // female split
     const fRet = fBorn * p.retainF;
     const fSell = fBorn - fRet;
 
-    // add newborns into cohorts (month 0 bucket)
     if(fCoh.length>0) fCoh[0] += fRet;
     if(mCoh.length>0) mCoh[0] += mBorn;
     fSaleCoh[0] += fSell;
 
-    // Mature retained females into does at breedAge
+    // mature retained females
     const toDoes = fCoh[fCoh.length-1] || 0;
     for(let i=fCoh.length-1;i>=1;i--) fCoh[i]=fCoh[i-1];
     if(fCoh.length>0) fCoh[0]=0;
     does += toDoes;
 
-    // Sell male kids at chosen age
+    // sell males
     const maleSold = (mCoh.length>0) ? (mCoh[mCoh.length-1] || 0) : 0;
     for(let i=mCoh.length-1;i>=1;i--) mCoh[i]=mCoh[i-1];
     if(mCoh.length>0) mCoh[0]=0;
 
-    // Sell female kids for breeding at 6 months
+    // sell females for breeding at 6 months
     const femaleBreedingSold = fSaleCoh[F_SALE_AGE-1] || 0;
     for(let i=F_SALE_AGE-1;i>=1;i--) fSaleCoh[i]=fSaleCoh[i-1];
     fSaleCoh[0]=0;
 
-    // Expansion purchases this month
-    const pur = purchaseForMonth(m);
+    // purchases
+    let pur = purchaseForMonth(m);
+    if(purchaseOverrideFn) pur = purchaseOverrideFn(m, pur);
+
     pF[0] += pur.f;
     pM[0] += pur.m;
     const purchSpend = (pur.f*p.buyF) + (pur.m*p.buyM);
 
-    // Breeding (monthly rate approx 1/kidding interval), limited by buck capacity
+    // breeding
     const capDoes = bucks * p.doesPerBuck;
     const attempted = Math.min(does, capDoes);
     const monthlyRate = 1 / p.kiddingInt;
-    const newPreg = attempted * monthlyRate * p.breedSuccess;
+
+    // apply seasonality to breeding success
+    const seasonBreedingMult = breedingSeasonFactor(p, m);
+    const newPreg = attempted * monthlyRate * p.breedSuccess * seasonBreedingMult;
     pregQ[0] += newPreg;
 
-    // Herd held on farm this month (for costs)
+    // herd held for costs
     const youngF = fCoh.reduce((a,b)=>a+b,0) + fSaleCoh.reduce((a,b)=>a+b,0) + pF.reduce((a,b)=>a+b,0) + startDoesPipe.reduce((a,b)=>a+b,0);
     const youngM = mCoh.reduce((a,b)=>a+b,0) + pM.reduce((a,b)=>a+b,0) + startBucksPipe.reduce((a,b)=>a+b,0);
     const herdTotal = does + bucks + youngF + youngM;
 
-    // Money: revenue and costs
-    const revenue = (maleSold * p.sellM) + (femaleBreedingSold * p.sellFb);
-    const opCost = (herdTotal * p.varPerGoatMo) + p.fixedMo; // operating
+    // C: seasonal cost bump and price change
+    const costMult = costSeasonMultiplier(p, m);
+    const priceMult = priceSeasonMultiplier(p, m);
+
+    const revenue = (maleSold * p.sellM * priceMult) + (femaleBreedingSold * p.sellFb * priceMult);
+
+    const opCost = (herdTotal * (p.varPerGoatMo * costMult)) + p.fixedMo;
     const allInCost = opCost + purchSpend;
 
-    const net = revenue - allInCost;         // all-in net this month
-    const opNet = revenue - opCost;          // operating net this month
+    const net = revenue - allInCost;
+    const opNet = revenue - opCost;
 
     cumNet += net;
     cumRev += revenue;
     cumOpCost += opCost;
     cumPurchSpend += purchSpend;
 
-    // operating BE and farm BE tracked to maxMonths
     if(opBE===null && revenue >= opCost) opBE = m;
     if(farmBE===null && cumNet >= 0) farmBE = m;
 
-    // self-sustaining: opNet >= 0 for 6 consecutive months
     if(opNet >= 0){
       opNonNegStreak++;
       if(selfSustain===null && opNonNegStreak >= 6) selfSustain = m - 5;
@@ -830,34 +936,38 @@ function simulateDeterministic(p){
 
     rows.push({
       m,
-      does, bucks,
-      youngF, youngM,
-      herdTotal,
-      capDoes,
-      attempted,
+      does, bucks, youngF, youngM, herdTotal,
+      capDoes, attempted,
       revenue, opCost, purchSpend, allInCost,
       net, opNet,
       cumNet, cumRev, cumOpCost, cumPurchSpend,
-      maleSold, femaleBreedingSold
+      maleSold, femaleBreedingSold,
+      costMult, priceMult, seasonBreedingMult
     });
 
-    // Stop when target is reached (chart horizon is target)
     if(herdTotal >= p.target) break;
   }
 
   const reachedMonth = rows.length ? (rows[rows.length-1].herdTotal >= p.target ? rows[rows.length-1].m : null) : null;
 
-  return {
-    rows,
-    reachedMonth,
-    opBE,
-    farmBE,
-    selfSustain,
-    startSpend
-  };
+  return { rows, reachedMonth, opBE, farmBE, selfSustain, startSpend };
 }
 
-/* ---------------- Monte Carlo (biology only; no price jitter) ---------------- */
+/* ---------------- D) stop-buy recommendation ---------------- */
+function findStopBuy(p){
+  // try stopping purchases after each purchase month
+  // return earliest cutoff month where target still reached by maxMonths
+  for(const cut of PURCHASE_MONTHS){
+    const res = simulateDeterministic(p, (m, pur)=>{
+      if(m > cut) return {f:0,m:0};
+      return pur;
+    });
+    if(res.reachedMonth !== null) return {cut, reach: res.reachedMonth};
+  }
+  return null;
+}
+
+/* ---------------- Monte Carlo (biology only; NO price jitter) ---------------- */
 function rng(seed){let s=seed>>>0;return ()=>{s^=s<<13;s>>>=0;s^=s>>17;s>>>=0;s^=s<<5;s>>>=0;return (s>>>0)/4294967296;};}
 function simRandTimeToTarget(p, seed){
   const r = rng(seed);
@@ -865,7 +975,7 @@ function simRandTimeToTarget(p, seed){
 
   const q = {...p};
 
-  // biology-only jitter (tight)
+  // jitter only biology rates
   q.kidsPerBirth  = clamp(jitter(p.kidsPerBirth, 0.12), 1, 3.5);
   q.kidSurvival   = clamp(jitter(p.kidSurvival, 0.10), 0.40, 1.00);
   q.breedSuccess  = clamp(jitter(p.breedSuccess, 0.08), 0.40, 1.00);
@@ -875,9 +985,8 @@ function simRandTimeToTarget(p, seed){
   return det.reachedMonth;
 }
 function monteCarlo(p){
-  if(p.mcOn !== "on"){
-    return {pct:null,p50:null,p90:null,runs:0};
-  }
+  if(p.mcOn !== "on") return {pct:null,p50:null,p90:null,runs:0};
+
   const runs = p.mcRuns;
   const reached = [];
   let hitTF = 0;
@@ -909,24 +1018,17 @@ function makeLineChart(canvasId, labels, datasets, extraOptions={}){
     type: "line",
     data: { labels, datasets },
     options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      aspectRatio: 3.2,
-      interaction: { mode:"index", intersect:false },
-      plugins: {
-        legend: { labels: { color:"#111", font: { weight:"800" } } },
-        tooltip: {
-          callbacks: {
-            label: (ctx)=> `${ctx.dataset.label}: ${fmtInt(ctx.parsed.y)}`
-          }
-        }
+      responsive:true,
+      maintainAspectRatio:true,
+      aspectRatio:3.2,
+      interaction:{mode:"index",intersect:false},
+      plugins:{
+        legend:{labels:{color:"#111",font:{weight:"800"}}},
+        tooltip:{callbacks:{label:(ctx)=>`${ctx.dataset.label}: ${fmtInt(ctx.parsed.y)}`}}
       },
-      scales: {
-        x: { ticks: { color:"#111" }, grid: { color:"rgba(0,0,0,.08)" } },
-        y: {
-          ticks: { color:"#111", callback: (v)=>fmtInt(v) },
-          grid: { color:"rgba(0,0,0,.08)" }
-        }
+      scales:{
+        x:{ticks:{color:"#111"},grid:{color:"rgba(0,0,0,.08)"}},
+        y:{ticks:{color:"#111",callback:(v)=>fmtInt(v)},grid:{color:"rgba(0,0,0,.08)"}}
       },
       ...extraOptions
     }
@@ -936,30 +1038,25 @@ function makeLineChart(canvasId, labels, datasets, extraOptions={}){
 function makeBarChart(canvasId, labels, datasets, extraOptions={}){
   const ctx = $(canvasId).getContext("2d");
   return new Chart(ctx, {
-    type: "bar",
-    data: { labels, datasets },
-    options: {
+    type:"bar",
+    data:{labels,datasets},
+    options:{
       responsive:true,
       maintainAspectRatio:true,
-      aspectRatio: 3.2,
-      plugins: {
-        legend: { labels: { color:"#111", font:{weight:"900"} } },
-        tooltip: {
-          callbacks: {
-            label: (ctx)=> `${ctx.dataset.label}: ${fmtInt(ctx.parsed.y)}`
-          }
-        }
+      aspectRatio:3.2,
+      plugins:{
+        legend:{labels:{color:"#111",font:{weight:"900"}}},
+        tooltip:{callbacks:{label:(ctx)=>`${ctx.dataset.label}: ${fmtInt(ctx.parsed.y)}`}}
       },
-      scales: {
-        x: { ticks: { color:"#111" }, grid: { color:"rgba(0,0,0,.08)" } },
-        y: { ticks: { color:"#111", callback:(v)=>fmtInt(v) }, grid: { color:"rgba(0,0,0,.08)" } }
+      scales:{
+        x:{ticks:{color:"#111"},grid:{color:"rgba(0,0,0,.08)"}},
+        y:{ticks:{color:"#111",callback:(v)=>fmtInt(v)},grid:{color:"rgba(0,0,0,.08)"}}
       },
       ...extraOptions
     }
   });
 }
 
-/* ---------------- render ---------------- */
 function horizonIndex(rows, reachedMonth, timeframe){
   const last = rows.length-1;
   if(last < 0) return 0;
@@ -967,6 +1064,88 @@ function horizonIndex(rows, reachedMonth, timeframe){
   return Math.min(timeframe, last);
 }
 
+/* ---------------- export prompt ---------------- */
+function buildAnalysisPrompt(p, det, mc, stop){
+  const rows = det.rows;
+  const h = rows.length ? rows.length-1 : 0;
+  const end = rows[h] || null;
+
+  // Trim monthly series to keep copy reasonable
+  const takeEvery = Math.max(1, Math.floor(rows.length / 60)); // ~<=60 points
+  const series = rows
+    .filter((_,i)=> i % takeEvery === 0 || i===rows.length-1)
+    .map(r=>({
+      month: r.m,
+      herdTotal: round0(r.herdTotal),
+      does: round0(r.does),
+      bucks: round0(r.bucks),
+      youngF: round0(r.youngF),
+      youngM: round0(r.youngM),
+      revenue: round0(r.revenue),
+      allInCost: round0(r.allInCost),
+      cumRevenue: round0(r.cumRev),
+      cumAllInCost: round0(r.cumOpCost + r.cumPurchSpend)
+    }));
+
+  const prompt =
+`You are my farm planning analyst. Use the JSON below to:
+1) Tell me what single change would get me to target faster (while staying realistic).
+2) Point out whether buck capacity or purchases is the bottleneck.
+3) Tell me if my money plan looks underfunded and why (use break-even + runway).
+4) Give me 3 actionable “if you do X, you save ~Y months” sensitivity hints (whole-number months).
+5) Flag any assumptions that might be too optimistic.
+
+Return your answer in:
+- Summary (3–5 bullets)
+- Herd growth diagnosis
+- Money diagnosis
+- Sensitivity hints (with approximate months saved)
+- Risks / assumptions
+
+JSON:
+${JSON.stringify({
+  inputs: {
+    target:p.target, timeframe:p.timeframe, maxMonths:p.maxMonths,
+    startDoes:p.startDoes, startBucks:p.startBucks,
+    purchaseMonths: PURCHASE_MONTHS,
+    purchases: Object.fromEntries(PURCHASE_MONTHS.map(mm=>[mm,{does:N(`p${mm}f`),bucks:N(`p${mm}m`)}])),
+    growth:{
+      kiddingInt:p.kiddingInt, breedSuccess:p.breedSuccess, kidsPerBirth:p.kidsPerBirth,
+      kidSurvival:p.kidSurvival, pctFemale:p.pctFemale, breedAge:p.breedAge,
+      doesPerBuck:p.doesPerBuck, doeLossYr:p.doeLossYr, retainF:p.retainF, maleSaleAge:p.maleSaleAge,
+      gestationMonths: GEST, purchaseMaturityMonths: PUR_MAT, femaleSaleAgeMonths: F_SALE_AGE,
+      seasonality:{on:p.seasonOn, peakMonths:p.peakMonths, offSeasonPenalty:p.seasonPenalty}
+    },
+    money:{
+      buyF:p.buyF, buyM:p.buyM, sellM:p.sellM, sellFb:p.sellFb,
+      feed:p.feed, med:p.med, othVar:p.othVar,
+      fixed:{propYr:p.propYr, laborMo:p.laborMo, vetMo:p.vetMo, secMo:p.secMo, trMo:p.trMo, adMo:p.adMo},
+      runwayMo:p.runwayMo,
+      drySeason:{on:p.dryOn, months:p.dryMonths, pct:p.dryPct},
+      priceSeason:{on:p.priceOn, months:p.priceMonths, pct:p.pricePct}
+    },
+    monteCarlo:{on:p.mcOn, runs:p.mcRuns}
+  },
+  outputs:{
+    deterministic:{
+      reachedMonth: det.reachedMonth,
+      operatingBE: det.opBE,
+      farmBE: det.farmBE,
+      selfSustain: det.selfSustain,
+      endMonth: end ? end.m : null,
+      endHerdTotal: end ? round0(end.herdTotal) : null
+    },
+    monteCarlo: (p.mcOn==="on") ? mc : {on:false},
+    stopBuy: stop
+  },
+  series
+}, null, 2)}
+`;
+
+  return prompt;
+}
+
+/* ---------------- render ---------------- */
 function updatePurchasesKpi(){
   const t = purchasePlanTotal();
   $("p_totalKpi").innerHTML =
@@ -976,10 +1155,14 @@ function updatePurchasesKpi(){
 
 function render(p, det, mc){
   const rows = det.rows;
-  if(!rows.length){
-    $("k_time").textContent = "—";
-    return;
-  }
+  if(!rows.length) return;
+
+  // Stop-buy
+  const stop = findStopBuy(p);
+  $("p_stopBuy").textContent = stop
+    ? `You can stop after Month ${stop.cut} and still hit target by Month ${stop.reach}.`
+    : `No stop-buy point found (with current settings).`;
+
   const h = horizonIndex(rows, det.reachedMonth, p.timeframe);
   const slice = rows.slice(0, h+1);
   const labels = slice.map(r=>r.m);
@@ -993,25 +1176,21 @@ function render(p, det, mc){
   const util = end.does / cap;
   $("k_buck").textContent = util > 1 ? "Limiting (add bucks)" : util > 0.85 ? "Tight" : "Healthy";
 
-  if(p.mcOn==="on"){
-    $("k_conf").textContent = `${mc.pct}% by Month ${p.timeframe}`;
-  } else {
-    $("k_conf").textContent = "Monte Carlo OFF";
-  }
+  $("k_conf").textContent = (p.mcOn==="on") ? `${mc.pct}% by Month ${p.timeframe}` : "Monte Carlo OFF";
 
-  // Purchases KPI (plan totals)
+  // Purchases KPI
   updatePurchasesKpi();
 
-  // Charts: Herd (under Purchases)
+  // Chart 1: Herd (Purchases tab)
   chHerd?.destroy();
   chHerd = makeLineChart("chartHerd", labels, [
     { label:"Does", data: slice.map(r=>round0(r.does)), borderWidth:2, tension:.25, pointRadius:0, fill:true },
     { label:"Bucks", data: slice.map(r=>round0(r.bucks)), borderWidth:2, tension:.25, pointRadius:0, fill:true },
     { label:"Young females", data: slice.map(r=>round0(r.youngF)), borderWidth:2, tension:.25, pointRadius:0, fill:true },
     { label:"Young males", data: slice.map(r=>round0(r.youngM)), borderWidth:2, tension:.25, pointRadius:0, fill:true },
-  ], { scales: { y: { stacked:true }, x:{ stacked:true } } });
+  ], { scales: { y:{stacked:true}, x:{stacked:true} } });
 
-  // Constraint chart: does vs buck capacity + bucks on 2nd axis
+  // Constraint chart: does vs cap + bucks on y2
   chCons?.destroy();
   chCons = new Chart($("chartConstraint").getContext("2d"), {
     type:"line",
@@ -1028,34 +1207,24 @@ function render(p, det, mc){
       interaction:{mode:"index",intersect:false},
       plugins:{
         legend:{labels:{color:"#111",font:{weight:"800"}}},
-        tooltip:{
-          callbacks:{ label:(ctx)=>`${ctx.dataset.label}: ${fmtInt(ctx.parsed.y)}` }
-        }
+        tooltip:{callbacks:{label:(ctx)=>`${ctx.dataset.label}: ${fmtInt(ctx.parsed.y)}`}}
       },
       scales:{
         x:{ticks:{color:"#111"},grid:{color:"rgba(0,0,0,.08)"}},
         y:{position:"left",ticks:{color:"#111",callback:(v)=>fmtInt(v)},grid:{color:"rgba(0,0,0,.08)"}},
-        y2:{
-          position:"right",
-          ticks:{color:"#111",callback:(v)=>fmtInt(v)},
-          grid:{drawOnChartArea:false}
-        }
+        y2:{position:"right",ticks:{color:"#111",callback:(v)=>fmtInt(v)},grid:{drawOnChartArea:false}}
       }
     }
   });
 
   // Money KPIs
   const runway = p.runwayMo;
-
-  // startup cash (costs for runway months + starting herd spend)
-  // conservative: uses month-0 herd count (starting herd in pipelines) for variable costs
   const month0 = slice[0];
   const herd0 = round0(month0.herdTotal);
-  const runwayCost = runway * (p.fixedMo + herd0 * p.varPerGoatMo);
+  const runwayCost = runway * (p.fixedMo + herd0 * (p.varPerGoatMo * costSeasonMultiplier(p, 0)));
   const startupCash = det.startSpend + runwayCost;
 
   $("m_startcash").textContent = money(startupCash);
-
   $("m_opbe").textContent = (det.opBE===null) ? "Never" : `Month ${det.opBE}`;
   $("m_fullbe").textContent = (det.farmBE===null) ? "Never" : `Month ${det.farmBE}`;
   $("m_self").textContent = (det.selfSustain===null) ? "Never" : `Month ${det.selfSustain}`;
@@ -1083,12 +1252,11 @@ function render(p, det, mc){
     { label:"Cumulative all-in costs", data: cumAllIn, borderWidth:2, tension:.25, pointRadius:0 },
   ]);
 
-  // Snapshot outcomes
+  // Snapshot
   $("s_det").textContent = (det.reachedMonth===null) ? "Never" : moFmt(det.reachedMonth);
-
   if(p.mcOn==="on"){
-    $("s_p50").textContent = mc.p50===null ? "Never" : moFmt(mc.p50);
-    $("s_p90").textContent = mc.p90===null ? "Never" : moFmt(mc.p90);
+    $("s_p50").textContent = (mc.p50===null) ? "Never" : moFmt(mc.p50);
+    $("s_p90").textContent = (mc.p90===null) ? "Never" : moFmt(mc.p90);
     $("s_conf").textContent = `${mc.pct}% by Month ${p.timeframe}`;
   } else {
     $("s_p50").textContent = "Monte Carlo OFF";
@@ -1096,7 +1264,6 @@ function render(p, det, mc){
     $("s_conf").textContent = "Monte Carlo OFF";
   }
 
-  // Choose snapshot month: target month if reached, else last simulated month
   const snapRow = slice[slice.length-1];
   const totalPurchSpend = round0(snapRow.cumPurchSpend);
   const totalRevTo = round0(snapRow.cumRev);
@@ -1108,7 +1275,6 @@ function render(p, det, mc){
   $("s_costTo").textContent = money(totalCostsTo);
   $("s_netTo").textContent = money(netTo);
 
-  // Herd composition at target month
   $("hc_does").textContent = fmtInt(snapRow.does);
   $("hc_bucks").textContent = fmtInt(snapRow.bucks);
   $("hc_yf").textContent = fmtInt(snapRow.youngF);
@@ -1118,15 +1284,17 @@ function render(p, det, mc){
   let shapeMsg = "";
   if(breederShare < 0.35){
     shapeMsg = "Herd shape note: You reached the number, but a lot of the herd is still young. That can slow near-term births and cash flow.";
+    $("hc_note").className = "banner small warn";
   } else if(breederShare < 0.55){
     shapeMsg = "Herd shape note: Balanced mix of breeders and young stock.";
+    $("hc_note").className = "banner small good";
   } else {
     shapeMsg = "Herd shape note: Strong breeder-heavy herd (good for continued growth).";
+    $("hc_note").className = "banner small good";
   }
-  $("hc_note").className = "banner small " + (breederShare < 0.35 ? "warn" : "good");
   $("hc_note").textContent = shapeMsg;
 
-  // Waterfall-style stacked bar: Revenue vs Op Costs vs Purchase Spend -> Net
+  // Waterfall
   chWF?.destroy();
   const wfLabels = ["At target month"];
   const opCostsTo = round0(snapRow.cumOpCost);
@@ -1137,22 +1305,28 @@ function render(p, det, mc){
     { label:"Total Operating Costs", data:[-opCostsTo], stack:"wf" },
     { label:"Total Purchase Spend", data:[-purchTo], stack:"wf" },
     { label:"Net Position", data:[netTo], stack:"net" }
-  ], {
-    scales:{
-      y:{
-        ticks:{color:"#111",callback:(v)=>fmtInt(v)},
-        grid:{color:"rgba(0,0,0,.08)"}
-      }
-    }
-  });
+  ]);
+
+  // Update export preview (so you can see it)
+  const prompt = buildAnalysisPrompt(p, det, mc, stop);
+  $("exportPreview").value = prompt;
+
+  // store latest run
+  window.__LAST_RUN__ = {p, det, mc, stop, prompt};
 }
 
-/* ---------------- run ---------------- */
-function run(){
-  // quick guardrails
+/* ---------------- run with spinner delay ---------------- */
+async function runWithSpinner(){
+  // guardrails
   $("breedAge").value = clamp(N("breedAge"),8,12);
   $("maleSaleAge").value = clamp(N("maleSaleAge"),1,12);
   $("retainF").value = clamp(N("retainF"),0,100);
+
+  const wrap = $("runWrap");
+  wrap.classList.add("isRunning");
+
+  // always show spinner for 1.5s
+  await new Promise(res=>setTimeout(res, 1500));
 
   const p = getParams();
   updatePurchasesKpi();
@@ -1161,11 +1335,52 @@ function run(){
   const mc = monteCarlo(p);
 
   render(p, det, mc);
+
+  wrap.classList.remove("isRunning");
 }
 
-$("runBtn").onclick = run;
+/* ---------------- copy button ---------------- */
+async function copyAnalysis(){
+  const run = window.__LAST_RUN__;
+  // if no run yet, generate one quickly (without spinner) to avoid empty copy
+  if(!run){
+    const p = getParams();
+    const det = simulateDeterministic(p);
+    const mc = monteCarlo(p);
+    const stop = findStopBuy(p);
+    const prompt = buildAnalysisPrompt(p, det, mc, stop);
+    window.__LAST_RUN__ = {p, det, mc, stop, prompt};
+    $("exportPreview").value = prompt;
+  }
+
+  const text = window.__LAST_RUN__.prompt;
+  try{
+    await navigator.clipboard.writeText(text);
+    $("copyBtn").textContent = "Copied ✅";
+    setTimeout(()=>{$("copyBtn").textContent="Copy analysis prompt";}, 1400);
+  }catch(e){
+    // fallback: select textarea
+    const ta = $("exportPreview");
+    ta.focus();
+    ta.select();
+    document.execCommand("copy");
+    $("copyBtn").textContent = "Copied ✅";
+    setTimeout(()=>{$("copyBtn").textContent="Copy analysis prompt";}, 1400);
+  }
+}
+
+/* ---------------- init ---------------- */
+$("runBtn").onclick = runWithSpinner;
+$("copyBtn").onclick = copyAnalysis;
+
 updatePurchasesKpi();
-run();
+// initial run (no spinner) to load something fast
+(() => {
+  const p = getParams();
+  const det = simulateDeterministic(p);
+  const mc = monteCarlo(p);
+  render(p, det, mc);
+})();
 </script>
 </body>
 </html>
