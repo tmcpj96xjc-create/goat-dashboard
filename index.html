@@ -8,100 +8,326 @@
   <style>
     :root { --bg:#0b1220; --card:#121a2b; --text:#e7eefc; --muted:#a9b8d6; --line:#223150; }
     body { margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:var(--bg); color:var(--text); }
-    .wrap { max-width: 1100px; margin: 0 auto; padding: 18px; }
+    .wrap { max-width: 1150px; margin: 0 auto; padding: 18px; }
     h1 { font-size: 20px; margin: 0 0 12px; }
-    .grid { display:grid; grid-template-columns: 360px 1fr; gap: 14px; }
     .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
-    .card h2 { margin: 0 0 10px; font-size: 14px; color: var(--muted); font-weight: 600; }
-    .row { display:grid; grid-template-columns: 1fr 110px; gap: 10px; align-items:center; padding: 8px 0; border-bottom: 1px dashed rgba(255,255,255,0.06); }
-    .row:last-child { border-bottom: none; }
-    label { font-size: 12.5px; }
-    input[type="number"] { width: 100%; padding: 7px 8px; border-radius: 10px; border: 1px solid var(--line); background: #0e1730; color: var(--text); }
-    .small { font-size: 12px; color: var(--muted); line-height: 1.35; }
-    .kpis { display:grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
+    .card h2 { margin: 0 0 10px; font-size: 14px; color: var(--muted); font-weight: 700; letter-spacing: .2px; }
+    .topGrid { display:grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 980px){ .topGrid { grid-template-columns: 1fr; } }
+
+    .row { display:grid; grid-template-columns: 1.2fr 1fr; gap: 12px; align-items:center; padding: 9px 0; border-bottom: 1px dashed rgba(255,255,255,0.07); }
+    .row:last-child{ border-bottom:none; }
+    label { font-size: 12.5px; color: var(--text); }
+    .control { display:grid; grid-template-columns: 1fr 110px; gap: 10px; align-items:center; }
+    input[type="range"]{ width: 100%; }
+    input[type="number"], select {
+      width: 100%; padding: 7px 8px; border-radius: 10px; border: 1px solid var(--line);
+      background: #0e1730; color: var(--text);
+    }
+
+    .actions { display:flex; gap:10px; flex-wrap: wrap; margin-top: 12px; }
+    button {
+      cursor:pointer; padding: 9px 10px; border-radius: 12px; border: 1px solid var(--line);
+      background: #0e1730; color: var(--text); font-weight: 700;
+    }
+    button:hover { border-color: rgba(169,184,214,0.9); }
+
+    .kpis { display:grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 14px; }
+    @media (max-width: 980px){ .kpis { grid-template-columns: repeat(2, 1fr); } }
     .kpi { background: #0e1730; border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
     .kpi .t { font-size: 12px; color: var(--muted); }
-    .kpi .v { font-size: 18px; margin-top: 6px; font-weight: 700; }
-    button { cursor:pointer; padding: 9px 10px; border-radius: 12px; border: 1px solid var(--line); background: #0e1730; color: var(--text); font-weight: 650; }
-    button:hover { border-color: rgba(169,184,214,0.8); }
-    .actions { display:flex; gap:10px; margin-top: 12px; }
-    .tableWrap { overflow:auto; max-height: 360px; border-radius: 12px; border: 1px solid var(--line); }
-    table { width: 100%; border-collapse: collapse; min-width: 760px; background:#0e1730; }
+    .kpi .v { font-size: 18px; margin-top: 6px; font-weight: 800; }
+
+    .splitBottom { display:grid; grid-template-columns: 1fr; gap: 14px; margin-top: 14px; }
+    .chartCard { background:#0e1730; border:1px solid var(--line); border-radius: 14px; padding: 12px; }
+    .small { font-size: 12px; color: var(--muted); line-height: 1.35; }
+    .tableWrap { overflow:auto; max-height: 380px; border-radius: 12px; border: 1px solid var(--line); background:#0e1730; }
+    table { width: 100%; border-collapse: collapse; min-width: 880px; }
     th, td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 12.5px; }
     th { position: sticky; top: 0; background: #101c38; text-align: left; color: var(--muted); }
-    @media (max-width: 920px){ .grid { grid-template-columns: 1fr; } }
+    .pill { display:inline-block; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); background: rgba(169,184,214,0.08); color: var(--text); font-size: 12px; }
+    .muted { color: var(--muted); }
   </style>
 </head>
 
 <body>
-  <div class="wrap">
-    <h1>Goat Herd Growth Dashboard</h1>
+<div class="wrap">
+  <h1>Goat Herd Growth Dashboard <span class="pill">Herd + Money + Scenarios</span></h1>
 
-    <div class="grid">
-      <div class="card">
-        <h2>Inputs</h2>
+  <!-- TOP: Inputs + Scenario controls -->
+  <div class="topGrid">
+    <div class="card">
+      <h2>Herd Inputs</h2>
 
-        <div class="row"><label>Target herd size</label><input id="target" type="number" min="10" step="1" value="200"></div>
-        <div class="row"><label>Starting breeding does</label><input id="startDoes" type="number" min="0" step="1" value="4"></div>
-        <div class="row"><label>Gestation (months)</label><input id="gest" type="number" min="3" max="7" step="1" value="5"></div>
-        <div class="row"><label>Kidding interval (months)</label><input id="kiddingInterval" type="number" min="6" max="18" step="1" value="12"></div>
-        <div class="row"><label>Age at first breeding (months)</label><input id="breedAge" type="number" min="6" max="18" step="1" value="10"></div>
-        <div class="row"><label>Avg kids per birth</label><input id="kidsPerBirth" type="number" min="1" max="3.5" step="0.1" value="1.8"></div>
-        <div class="row"><label>% female kids</label><input id="pctFemale" type="number" min="40" max="60" step="1" value="50"></div>
-        <div class="row"><label>Kid survival to weaning (%)</label><input id="kidSurvival" type="number" min="50" max="100" step="1" value="90"></div>
-        <div class="row"><label>Adult annual loss (mortality/cull) (%)</label><input id="adultLoss" type="number" min="0" max="25" step="0.5" value="5"></div>
-        <div class="row"><label>Sell male kids at weaning? (0–100%)</label><input id="sellMalesPct" type="number" min="0" max="100" step="5" value="90"></div>
-        <div class="row"><label>Sell female kids? (0–100%)</label><input id="sellFemalesPct" type="number" min="0" max="100" step="5" value="0"></div>
-        <div class="row"><label>Months to simulate</label><input id="monthsSim" type="number" min="12" max="240" step="12" value="120"></div>
-
-        <div class="actions">
-          <button id="runBtn">Run simulation</button>
-          <button id="resetBtn">Reset</button>
+      <div class="row">
+        <label>Target herd size</label>
+        <div class="control">
+          <input id="target_r" type="range" min="50" max="500" step="10" value="200">
+          <input id="target" type="number" min="10" step="1" value="200">
         </div>
-
-        <p class="small" style="margin-top:12px;">
-          This is a planning model. It assumes a fixed breeding cycle and applies survival/loss rates.
-          If results feel too fast, increase kidding interval, lower kids per birth, or increase losses/sales.
-        </p>
       </div>
 
-      <div class="card">
-        <h2>Results</h2>
-
-        <div class="kpis">
-          <div class="kpi"><div class="t">Time to target</div><div class="v" id="kpiTime">—</div></div>
-          <div class="kpi"><div class="t">Peak herd (within simulation)</div><div class="v" id="kpiPeak">—</div></div>
-          <div class="kpi"><div class="t">Breeding does at end</div><div class="v" id="kpiDoesEnd">—</div></div>
+      <div class="row">
+        <label>Starting breeding does</label>
+        <div class="control">
+          <input id="startDoes_r" type="range" min="1" max="30" step="1" value="4">
+          <input id="startDoes" type="number" min="0" step="1" value="4">
         </div>
-
-        <div class="card" style="padding:12px; margin-bottom:12px;">
-          <canvas id="chart" height="120"></canvas>
-          <div class="small" style="margin-top:8px;">Line = total herd. Dashed line = breeding does.</div>
-        </div>
-
-        <h2>Monthly breakdown</h2>
-        <div class="tableWrap">
-          <table id="table">
-            <thead>
-              <tr>
-                <th>Month</th>
-                <th>Breeding does</th>
-                <th>Does bred</th>
-                <th>Kids born</th>
-                <th>Female kids kept</th>
-                <th>Male kids kept</th>
-                <th>Total herd</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-
       </div>
+
+      <div class="row">
+        <label>Gestation (months)</label>
+        <div class="control">
+          <input id="gest_r" type="range" min="4" max="6" step="1" value="5">
+          <input id="gest" type="number" min="3" max="7" step="1" value="5">
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Kidding interval (months)</label>
+        <div class="control">
+          <input id="kiddingInterval_r" type="range" min="6" max="18" step="1" value="12">
+          <input id="kiddingInterval" type="number" min="6" max="18" step="1" value="12">
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Age at first breeding (months)</label>
+        <div class="control">
+          <input id="breedAge_r" type="range" min="6" max="18" step="1" value="10">
+          <input id="breedAge" type="number" min="6" max="18" step="1" value="10">
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Avg kids per birth</label>
+        <div class="control">
+          <input id="kidsPerBirth_r" type="range" min="1.0" max="3.0" step="0.1" value="1.8">
+          <input id="kidsPerBirth" type="number" min="1" max="3.5" step="0.1" value="1.8">
+        </div>
+      </div>
+
+      <div class="row">
+        <label>% female kids</label>
+        <div class="control">
+          <input id="pctFemale_r" type="range" min="40" max="60" step="1" value="50">
+          <input id="pctFemale" type="number" min="40" max="60" step="1" value="50">
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Kid survival to weaning (%)</label>
+        <div class="control">
+          <input id="kidSurvival_r" type="range" min="50" max="100" step="1" value="90">
+          <input id="kidSurvival" type="number" min="50" max="100" step="1" value="90">
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Adult annual loss (mortality/cull) (%)</label>
+        <div class="control">
+          <input id="adultLoss_r" type="range" min="0" max="25" step="0.5" value="5">
+          <input id="adultLoss" type="number" min="0" max="25" step="0.5" value="5">
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Sell male kids at weaning (%)</label>
+        <div class="control">
+          <input id="sellMalesPct_r" type="range" min="0" max="100" step="5" value="90">
+          <input id="sellMalesPct" type="number" min="0" max="100" step="5" value="90">
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Sell female kids (%)</label>
+        <div class="control">
+          <input id="sellFemalesPct_r" type="range" min="0" max="100" step="5" value="0">
+          <input id="sellFemalesPct" type="number" min="0" max="100" step="5" value="0">
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Months to simulate</label>
+        <div class="control">
+          <input id="monthsSim_r" type="range" min="24" max="240" step="12" value="120">
+          <input id="monthsSim" type="number" min="12" max="240" step="12" value="120">
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="runBtn">Run</button>
+        <button id="resetBtn">Reset</button>
+      </div>
+
+      <p class="small" style="margin-top:10px;">
+        Tip: if results look too fast, increase kidding interval, lower kids per birth, raise adult loss, or sell more females.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Money Inputs + Scenarios</h2>
+
+      <div class="row">
+        <label>Currency label (e.g., UGX)</label>
+        <div class="control">
+          <input id="currency_r" type="range" min="0" max="0" step="1" value="0" style="display:none;">
+          <input id="currency" type="text" value="UGX" style="padding:7px 8px; border-radius:10px; border:1px solid var(--line); background:#0e1730; color:var(--text);">
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Cost to buy one breeding doe</label>
+        <div class="control">
+          <input id="buyDoe_r" type="range" min="0" max="2000000" step="50000" value="0">
+          <input id="buyDoe" type="number" min="0" step="1000" value="0">
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Feed/health cost per goat per month</label>
+        <div class="control">
+          <input id="costPerGoatMonth_r" type="range" min="0" max="300000" step="5000" value="0">
+          <input id="costPerGoatMonth" type="number" min="0" step="100" value="0">
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Sale price per male kid sold</label>
+        <div class="control">
+          <input id="sellMalePrice_r" type="range" min="0" max="2000000" step="50000" value="0">
+          <input id="sellMalePrice" type="number" min="0" step="1000" value="0">
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Sale price per female kid sold</label>
+        <div class="control">
+          <input id="sellFemalePrice_r" type="range" min="0" max="2000000" step="50000" value="0">
+          <input id="sellFemalePrice" type="number" min="0" step="1000" value="0">
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Scenario</label>
+        <div class="control">
+          <select id="scenarioSelect"></select>
+          <button id="loadScenarioBtn">Load</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Save current inputs as…</label>
+        <div class="control">
+          <input id="scenarioName" type="text" placeholder="e.g., Realistic, Best Case">
+          <button id="saveScenarioBtn">Save</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Delete selected scenario</label>
+        <div class="control">
+          <span class="muted" id="scenarioHint">Saved in this browser</span>
+          <button id="deleteScenarioBtn">Delete</button>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="savePresetBtn" title="Creates 3 presets: Best/Realistic/Worst">Create presets</button>
+      </div>
+
+      <p class="small" style="margin-top:10px;">
+        Money view is a simple planning layer: monthly costs are based on total herd size, sales are based on % sold and prices.
+      </p>
     </div>
   </div>
 
+  <!-- KPIs -->
+  <div class="card" style="margin-top:14px;">
+    <h2>Results</h2>
+    <div class="kpis">
+      <div class="kpi"><div class="t">Time to target</div><div class="v" id="kpiTime">—</div></div>
+      <div class="kpi"><div class="t">Peak herd</div><div class="v" id="kpiPeak">—</div></div>
+      <div class="kpi"><div class="t">Breeding does (end)</div><div class="v" id="kpiDoesEnd">—</div></div>
+      <div class="kpi"><div class="t">Net cashflow (sim)</div><div class="v" id="kpiNetCash">—</div></div>
+    </div>
+    <div class="small" style="margin-top:10px;">
+      Net cashflow = (sales revenue) − (purchase cost) − (monthly herd costs). This is a simplified estimate.
+    </div>
+  </div>
+
+  <!-- BOTTOM: charts + table -->
+  <div class="splitBottom">
+    <div class="card">
+      <h2>Charts</h2>
+      <div class="chartCard">
+        <canvas id="herdChart" height="120"></canvas>
+        <div class="small muted" style="margin-top:8px;">Line = total herd. Dashed = breeding does.</div>
+      </div>
+      <div class="chartCard" style="margin-top:12px;">
+        <canvas id="cashChart" height="120"></canvas>
+        <div class="small muted" style="margin-top:8px;">Cash series = cumulative net cashflow across the simulation.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Monthly breakdown (first 120 months shown)</h2>
+      <div class="tableWrap">
+        <table id="table">
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th>Total herd</th>
+              <th>Breeding does</th>
+              <th>Does bred</th>
+              <th>Kids born</th>
+              <th>Males sold</th>
+              <th>Females sold</th>
+              <th>Monthly cost</th>
+              <th>Monthly revenue</th>
+              <th>Net (month)</th>
+              <th>Cash (cum)</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="small" style="margin-top:10px;">
+        Note: for simplicity, male/female sales are assumed to happen at weaning in the same month as birth (planning assumption).
+      </p>
+    </div>
+  </div>
+</div>
+
 <script>
+  // ---------- helpers ----------
+  const $ = (id)=> document.getElementById(id);
+  const toNum = (v)=> Number(v);
+
+  function fmt1(n){ return (Math.round(n * 10) / 10).toLocaleString(); }
+  function fmt0(n){ return Math.round(n).toLocaleString(); }
+  function money(n, cur){
+    const v = Math.round(n);
+    return (cur ? (cur + " ") : "") + v.toLocaleString();
+  }
+
+  // ---------- input wiring: keep range + number in sync ----------
+  const RANGE_NUM_PAIRS = [
+    ["target_r","target"],["startDoes_r","startDoes"],["gest_r","gest"],["kiddingInterval_r","kiddingInterval"],
+    ["breedAge_r","breedAge"],["kidsPerBirth_r","kidsPerBirth"],["pctFemale_r","pctFemale"],["kidSurvival_r","kidSurvival"],
+    ["adultLoss_r","adultLoss"],["sellMalesPct_r","sellMalesPct"],["sellFemalesPct_r","sellFemalesPct"],["monthsSim_r","monthsSim"],
+    ["buyDoe_r","buyDoe"],["costPerGoatMonth_r","costPerGoatMonth"],["sellMalePrice_r","sellMalePrice"],["sellFemalePrice_r","sellFemalePrice"]
+  ];
+
+  function linkPair(rId, nId){
+    const r = $(rId), n = $(nId);
+    if(!r || !n) return;
+    r.addEventListener("input", ()=> { n.value = r.value; });
+    n.addEventListener("input", ()=> { r.value = n.value; });
+  }
+  RANGE_NUM_PAIRS.forEach(([r,n])=> linkPair(r,n));
+
+  // ---------- defaults ----------
   const DEFAULTS = {
     target: 200,
     startDoes: 4,
@@ -114,45 +340,68 @@
     adultLoss: 5,
     sellMalesPct: 90,
     sellFemalesPct: 0,
-    monthsSim: 120
+    monthsSim: 120,
+    currency: "UGX",
+    buyDoe: 0,
+    costPerGoatMonth: 0,
+    sellMalePrice: 0,
+    sellFemalePrice: 0
   };
 
-  const $ = (id)=> document.getElementById(id);
+  function setDefaults(){
+    Object.entries(DEFAULTS).forEach(([k,v])=>{
+      const el = $(k);
+      if(!el) return;
+      el.value = v;
+      // sync range if exists
+      const r = $(k + "_r");
+      if(r) r.value = v;
+    });
+  }
 
-  function getInputs(){
-    const n = (id)=> Number($(id).value);
+  function getParams(){
     return {
-      target: n("target"),
-      startDoes: n("startDoes"),
-      gest: n("gest"),
-      kiddingInterval: n("kiddingInterval"),
-      breedAge: n("breedAge"),
-      kidsPerBirth: n("kidsPerBirth"),
-      pctFemale: n("pctFemale")/100,
-      kidSurvival: n("kidSurvival")/100,
-      adultLossAnnual: n("adultLoss")/100,
-      sellMalesPct: n("sellMalesPct")/100,
-      sellFemalesPct: n("sellFemalesPct")/100,
-      monthsSim: n("monthsSim")
+      target: toNum($("target").value),
+      startDoes: toNum($("startDoes").value),
+      gest: toNum($("gest").value),
+      kiddingInterval: toNum($("kiddingInterval").value),
+      breedAge: toNum($("breedAge").value),
+      kidsPerBirth: toNum($("kidsPerBirth").value),
+      pctFemale: toNum($("pctFemale").value)/100,
+      kidSurvival: toNum($("kidSurvival").value)/100,
+      adultLossAnnual: toNum($("adultLoss").value)/100,
+      sellMalesPct: toNum($("sellMalesPct").value)/100,
+      sellFemalesPct: toNum($("sellFemalesPct").value)/100,
+      monthsSim: toNum($("monthsSim").value),
+      currency: ($("currency").value || "").trim(),
+      buyDoe: toNum($("buyDoe").value),
+      costPerGoatMonth: toNum($("costPerGoatMonth").value),
+      sellMalePrice: toNum($("sellMalePrice").value),
+      sellFemalePrice: toNum($("sellFemalePrice").value),
     };
   }
 
+  // ---------- simulation ----------
   function simulate(p){
     const months = p.monthsSim;
 
-    let femaleAges = Array(p.breedAge).fill(0);
-    let doesBred = Array(months).fill(0);
+    let femaleAges = Array(p.breedAge).fill(0);       // pipeline to breeders
+    let doesBred = Array(months).fill(0);             // breeding events
 
     let breedingDoes = p.startDoes;
     let totalHerd = p.startDoes;
     let peakHerd = totalHerd;
 
-    doesBred[0] = breedingDoes; // initial breeding event
+    doesBred[0] = breedingDoes;                       // initial breeding event
     const monthlyAdultLoss = p.adultLossAnnual / 12;
 
-    const rows = [];
     let monthHitTarget = null;
 
+    // money
+    const initialPurchaseCost = p.startDoes * p.buyDoe; // if you want to treat starting does as purchased
+    let cashCum = -initialPurchaseCost;
+
+    const rows = [];
     for(let m=0; m<months; m++){
       const adultsLost = breedingDoes * monthlyAdultLoss;
       breedingDoes = Math.max(0, breedingDoes - adultsLost);
@@ -166,8 +415,11 @@
       const femaleKids = kidsBorn * p.pctFemale;
       const maleKids = kidsBorn * (1 - p.pctFemale);
 
-      const femaleKept = femaleKids * (1 - p.sellFemalesPct);
-      const maleKept = maleKids * (1 - p.sellMalesPct);
+      const femalesSold = femaleKids * p.sellFemalesPct;
+      const malesSold = maleKids * p.sellMalesPct;
+
+      const femaleKept = femaleKids - femalesSold;
+      const maleKept = maleKids - malesSold;
 
       const femalesToBreeders = femaleAges[p.breedAge - 1] || 0;
       for (let a = p.breedAge - 1; a >= 1; a--) femaleAges[a] = femaleAges[a - 1];
@@ -184,53 +436,61 @@
       peakHerd = Math.max(peakHerd, totalHerd);
       if (monthHitTarget === null && totalHerd >= p.target) monthHitTarget = m;
 
+      // money: costs and revenue
+      const monthlyCost = totalHerd * p.costPerGoatMonth;
+      const monthlyRevenue = (malesSold * p.sellMalePrice) + (femalesSold * p.sellFemalePrice);
+      const netMonth = monthlyRevenue - monthlyCost;
+      cashCum += netMonth;
+
       rows.push({
         month: m,
+        totalHerd,
         breedingDoes,
         doesBred: doesBred[m] || 0,
         kidsBorn,
-        femaleKept,
-        maleKept,
-        totalHerd
+        malesSold,
+        femalesSold,
+        monthlyCost,
+        monthlyRevenue,
+        netMonth,
+        cashCum
       });
     }
-    return { rows, monthHitTarget, peakHerd, breedingDoesEnd: rows[rows.length-1]?.breedingDoes ?? breedingDoes };
+
+    return {
+      rows,
+      monthHitTarget,
+      peakHerd,
+      breedingDoesEnd: rows[rows.length-1]?.breedingDoes ?? breedingDoes,
+      netCashEnd: rows[rows.length-1]?.cashCum ?? cashCum,
+      initialPurchaseCost
+    };
   }
 
-  function fmt(n){ return (Math.round(n * 10) / 10).toLocaleString(); }
+  // ---------- charts ----------
+  let herdChart = null;
+  let cashChart = null;
 
-  let chart = null;
+  function renderCharts(rows){
+    const labels = rows.map(r=> r.month);
+    const herd = rows.map(r=> r.totalHerd);
+    const does = rows.map(r=> r.breedingDoes);
+    const cash = rows.map(r=> r.cashCum);
 
-  function render(res, p){
-    if (res.monthHitTarget === null){
-      $("kpiTime").textContent = `Not reached in ${p.monthsSim} months`;
-    } else {
-      const years = Math.floor(res.monthHitTarget / 12);
-      const months = res.monthHitTarget % 12;
-      $("kpiTime").textContent = years > 0 ? `${years}y ${months}m` : `${months} months`;
-    }
-    $("kpiPeak").textContent = fmt(res.peakHerd);
-    $("kpiDoesEnd").textContent = fmt(res.breedingDoesEnd);
-
-    const labels = res.rows.map(r => r.month);
-    const totals = res.rows.map(r => r.totalHerd);
-    const does = res.rows.map(r => r.breedingDoes);
-
-    const ctx = $("chart").getContext("2d");
-    if(chart) chart.destroy();
-
-    chart = new Chart(ctx, {
+    // Herd chart
+    const ctx1 = $("herdChart").getContext("2d");
+    if(herdChart) herdChart.destroy();
+    herdChart = new Chart(ctx1, {
       type: "line",
       data: {
         labels,
         datasets: [
-          { label: "Total herd", data: totals, borderWidth: 2, pointRadius: 0, tension: 0.25 },
+          { label: "Total herd", data: herd, borderWidth: 2, pointRadius: 0, tension: 0.25 },
           { label: "Breeding does", data: does, borderWidth: 2, pointRadius: 0, tension: 0.25, borderDash: [6,4] }
         ]
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
+        responsive: true, maintainAspectRatio: false,
         plugins: { legend: { labels: { color: "#a9b8d6" } } },
         scales: {
           x: { ticks: { color: "#a9b8d6" }, grid: { color: "rgba(255,255,255,0.05)" } },
@@ -239,42 +499,226 @@
       }
     });
 
+    // Cash chart
+    const ctx2 = $("cashChart").getContext("2d");
+    if(cashChart) cashChart.destroy();
+    cashChart = new Chart(ctx2, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          { label: "Cumulative net cash", data: cash, borderWidth: 2, pointRadius: 0, tension: 0.25 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: "#a9b8d6" } } },
+        scales: {
+          x: { ticks: { color: "#a9b8d6" }, grid: { color: "rgba(255,255,255,0.05)" } },
+          y: { ticks: { color: "#a9b8d6" }, grid: { color: "rgba(255,255,255,0.05)" } }
+        }
+      }
+    });
+  }
+
+  function renderTable(rows, cur){
     const tbody = $("table").querySelector("tbody");
     tbody.innerHTML = "";
-    const showRows = Math.min(res.rows.length, 120);
-    for(let i=0; i<showRows; i++){
-      const r = res.rows[i];
+    const show = Math.min(rows.length, 120);
+    for(let i=0;i<show;i++){
+      const r = rows[i];
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${r.month}</td>
-        <td>${fmt(r.breedingDoes)}</td>
-        <td>${fmt(r.doesBred)}</td>
-        <td>${fmt(r.kidsBorn)}</td>
-        <td>${fmt(r.femaleKept)}</td>
-        <td>${fmt(r.maleKept)}</td>
-        <td><b>${fmt(r.totalHerd)}</b></td>
+        <td><b>${fmt1(r.totalHerd)}</b></td>
+        <td>${fmt1(r.breedingDoes)}</td>
+        <td>${fmt1(r.doesBred)}</td>
+        <td>${fmt1(r.kidsBorn)}</td>
+        <td>${fmt1(r.malesSold)}</td>
+        <td>${fmt1(r.femalesSold)}</td>
+        <td>${money(r.monthlyCost, cur)}</td>
+        <td>${money(r.monthlyRevenue, cur)}</td>
+        <td>${money(r.netMonth, cur)}</td>
+        <td><b>${money(r.cashCum, cur)}</b></td>
       `;
       tbody.appendChild(tr);
     }
   }
 
-  function setDefaults(){
-    for (const [k,v] of Object.entries(DEFAULTS)) $(k).value = v;
+  function renderKPIs(res, p){
+    if (res.monthHitTarget === null){
+      $("kpiTime").textContent = `Not reached in ${p.monthsSim} months`;
+    } else {
+      const years = Math.floor(res.monthHitTarget / 12);
+      const months = res.monthHitTarget % 12;
+      $("kpiTime").textContent = years > 0 ? `${years}y ${months}m` : `${months} months`;
+    }
+    $("kpiPeak").textContent = fmt1(res.peakHerd);
+    $("kpiDoesEnd").textContent = fmt1(res.breedingDoesEnd);
+    $("kpiNetCash").textContent = money(res.netCashEnd, p.currency);
   }
 
+  // ---------- scenarios (saved in browser localStorage) ----------
+  const STORE_KEY = "goat_dashboard_scenarios_v1";
+
+  function readScenarios(){
+    try { return JSON.parse(localStorage.getItem(STORE_KEY) || "{}"); }
+    catch { return {}; }
+  }
+  function writeScenarios(obj){
+    localStorage.setItem(STORE_KEY, JSON.stringify(obj));
+  }
+
+  function refreshScenarioSelect(){
+    const sel = $("scenarioSelect");
+    const data = readScenarios();
+    const names = Object.keys(data).sort((a,b)=> a.localeCompare(b));
+    sel.innerHTML = "";
+    const opt0 = document.createElement("option");
+    opt0.value = "";
+    opt0.textContent = names.length ? "Select saved scenario…" : "No saved scenarios yet";
+    sel.appendChild(opt0);
+    names.forEach(name=>{
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      sel.appendChild(opt);
+    });
+  }
+
+  function applyParams(p){
+    // set values + sync ranges
+    const set = (id, val)=>{
+      const el = $(id);
+      if(!el) return;
+      el.value = val;
+      const r = $(id + "_r");
+      if(r) r.value = val;
+    };
+
+    set("target", p.target);
+    set("startDoes", p.startDoes);
+    set("gest", p.gest);
+    set("kiddingInterval", p.kiddingInterval);
+    set("breedAge", p.breedAge);
+    set("kidsPerBirth", p.kidsPerBirth);
+    set("pctFemale", p.pctFemale);
+    set("kidSurvival", p.kidSurvival);
+    set("adultLoss", p.adultLoss);
+    set("sellMalesPct", p.sellMalesPct);
+    set("sellFemalesPct", p.sellFemalesPct);
+    set("monthsSim", p.monthsSim);
+
+    $("currency").value = p.currency ?? "UGX";
+    set("buyDoe", p.buyDoe ?? 0);
+    set("costPerGoatMonth", p.costPerGoatMonth ?? 0);
+    set("sellMalePrice", p.sellMalePrice ?? 0);
+    set("sellFemalePrice", p.sellFemalePrice ?? 0);
+  }
+
+  function currentInputsAsScenario(){
+    const p = getParams();
+    // store the numbers in UI format (percent fields as raw percent numbers)
+    return {
+      target: toNum($("target").value),
+      startDoes: toNum($("startDoes").value),
+      gest: toNum($("gest").value),
+      kiddingInterval: toNum($("kiddingInterval").value),
+      breedAge: toNum($("breedAge").value),
+      kidsPerBirth: toNum($("kidsPerBirth").value),
+      pctFemale: toNum($("pctFemale").value),
+      kidSurvival: toNum($("kidSurvival").value),
+      adultLoss: toNum($("adultLoss").value),
+      sellMalesPct: toNum($("sellMalesPct").value),
+      sellFemalesPct: toNum($("sellFemalesPct").value),
+      monthsSim: toNum($("monthsSim").value),
+      currency: ($("currency").value || "UGX").trim(),
+      buyDoe: toNum($("buyDoe").value),
+      costPerGoatMonth: toNum($("costPerGoatMonth").value),
+      sellMalePrice: toNum($("sellMalePrice").value),
+      sellFemalePrice: toNum($("sellFemalePrice").value)
+    };
+  }
+
+  // ---------- main run ----------
   function run(){
-    const p = getInputs();
-    if (p.target <= 0 || p.kiddingInterval <= 0 || p.gest <= 0 || p.breedAge <= 0){
-      alert("Please check inputs (must be positive)."); return;
+    const p = getParams();
+    if(p.target <= 0 || p.kiddingInterval <= 0 || p.gest <= 0 || p.breedAge <= 0){
+      alert("Please check your inputs (must be positive).");
+      return;
     }
     const res = simulate(p);
-    render(res, p);
+    renderKPIs(res, p);
+    renderCharts(res.rows);
+    renderTable(res.rows, p.currency);
   }
 
+  // ---------- buttons ----------
   $("runBtn").addEventListener("click", run);
-  $("resetBtn").addEventListener("click", () => { setDefaults(); run(); });
+  $("resetBtn").addEventListener("click", ()=>{ setDefaults(); refreshScenarioSelect(); run(); });
 
+  $("saveScenarioBtn").addEventListener("click", ()=>{
+    const name = ($("scenarioName").value || "").trim();
+    if(!name){ alert("Please enter a scenario name (e.g., Realistic)."); return; }
+    const data = readScenarios();
+    data[name] = currentInputsAsScenario();
+    writeScenarios(data);
+    $("scenarioName").value = "";
+    refreshScenarioSelect();
+    alert(`Saved scenario: ${name}`);
+  });
+
+  $("loadScenarioBtn").addEventListener("click", ()=>{
+    const name = $("scenarioSelect").value;
+    if(!name){ alert("Select a scenario first."); return; }
+    const data = readScenarios();
+    const sc = data[name];
+    if(!sc){ alert("Scenario not found."); return; }
+    applyParams(sc);
+    run();
+  });
+
+  $("deleteScenarioBtn").addEventListener("click", ()=>{
+    const name = $("scenarioSelect").value;
+    if(!name){ alert("Select a scenario first."); return; }
+    const data = readScenarios();
+    if(!data[name]){ alert("Scenario not found."); return; }
+    delete data[name];
+    writeScenarios(data);
+    refreshScenarioSelect();
+    run();
+  });
+
+  // Presets: Best / Realistic / Worst (you can edit after loading)
+  $("savePresetBtn").addEventListener("click", ()=>{
+    const base = currentInputsAsScenario();
+    const presets = {
+      "Best case": {
+        ...base,
+        kidsPerBirth: Math.min(3.0, base.kidsPerBirth + 0.4),
+        kidSurvival: Math.min(98, base.kidSurvival + 5),
+        adultLoss: Math.max(0, base.adultLoss - 2),
+        sellFemalesPct: Math.max(0, base.sellFemalesPct - 0)
+      },
+      "Realistic": { ...base },
+      "Worst case": {
+        ...base,
+        kidsPerBirth: Math.max(1.0, base.kidsPerBirth - 0.4),
+        kidSurvival: Math.max(60, base.kidSurvival - 10),
+        adultLoss: Math.min(25, base.adultLoss + 4),
+        kiddingInterval: Math.min(18, base.kiddingInterval + 2)
+      }
+    };
+    const data = readScenarios();
+    Object.entries(presets).forEach(([k,v])=> data[k] = v);
+    writeScenarios(data);
+    refreshScenarioSelect();
+    alert("Created presets: Best case, Realistic, Worst case");
+  });
+
+  // ---------- init ----------
   setDefaults();
+  refreshScenarioSelect();
   run();
 </script>
 </body>
