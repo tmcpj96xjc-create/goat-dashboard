@@ -156,6 +156,7 @@
     <button class="tabBtn active" data-tab="growthTab">Goat Growth</button>
     <button class="tabBtn" data-tab="purchasesTab">Purchases</button>
     <button class="tabBtn" data-tab="moneyTab">Money</button>
+    <button class="tabBtn" data-tab="snapshotTab">Snapshot</button>
   </div>
 
   <!-- Goat Growth Tab -->
@@ -665,6 +666,11 @@
   const fmt1 = (n)=> (Math.round(n * 10) / 10).toLocaleString();
   const fmt0 = (n)=> Math.round(n).toLocaleString();
   const money = (n, cur)=> (cur ? (cur + " ") : "") + Math.round(n).toLocaleString();
+  function pickHorizonIndex(rows, reachedMonth, timeframe){
+  const last = rows.length - 1;
+  if (reachedMonth !== null) return Math.min(reachedMonth, last);
+  return Math.min(timeframe, last);
+}
 
   // sync pairs (range <-> number)
   const PAIRS = [
@@ -1061,14 +1067,15 @@
   let constraintChart = null;
   let cashChart = null;
 
-  function renderCharts(rows){
-    const labels = rows.map(r=> r.month);
+  function renderCharts(rows, horizonIdx){
+    const slice = rows.slice(0, horizonIdx + 1); 
+    const labels = slice.map(r=> r.month);
 
     // Chart 1: composition stacked
-    const breedingDoes = rows.map(r=> r.breedingDoes);
-    const youngFemales = rows.map(r=> r.youngFemales);
-    const activeBucks = rows.map(r=> r.activeBucks);
-    const youngMales = rows.map(r=> r.youngMales);
+    const breedingDoes = slice.map(r=> r.breedingDoes);
+    const youngFemales = slice.map(r=> r.youngFemales);
+    const activeBucks = slice.map(r=> r.activeBucks);
+    const youngMales = slice.map(r=> r.youngMales);
 
     const ctx1 = $("compositionChart").getContext("2d");
     if (compositionChart) compositionChart.destroy();
@@ -1094,8 +1101,8 @@
     });
 
     // Chart 2: constraint lines
-    const doesAvail = rows.map(r=> r.breedingDoes);
-    const capacityDoes = rows.map(r=> r.activeBucks * N("doesPerBuck"));
+    const doesAvail = slice.map(r=> r.breedingDoes);
+    const capacityDoes = slice.map(r=> r.activeBucks * N("doesPerBuck"));
 
     const ctx2 = $("constraintChart").getContext("2d");
     if (constraintChart) constraintChart.destroy();
@@ -1119,7 +1126,7 @@
     });
 
     // Cash chart
-    const cash = rows.map(r=> r.cashCum);
+    const cash = slice.map(r=> r.cashCum);
     const ctx3 = $("cashChart").getContext("2d");
     if (cashChart) cashChart.destroy();
     cashChart = new Chart(ctx3, {
@@ -1269,12 +1276,49 @@
 
   // ---------- run ----------
   function run(){
-    const p = getParams();
-    const res = simulateDeterministic(p, null);
-    renderKPIs(p, res);
-    renderCharts(res.rows);
-    renderMoneyTable(res.rows, p.currency);
-    runConfidence(p);
+    function run(){
+  const p = getParams();
+  const res = simulateDeterministic(p, null);
+
+  // Horizon to keep charts readable
+  const horizonIdx = pickHorizonIndex(res.rows, res.reachedMonth, p.timeframe);
+
+  renderKPIs(p, res);
+  renderCharts(res.rows, horizonIdx);
+  renderMoneyTable(res.rows.slice(0, horizonIdx + 1), p.currency);
+
+  // Confidence + snapshot
+  const conf = runConfidence(p);
+
+  // Deterministic time
+  if (res.reachedMonth !== null){
+    const y = Math.floor(res.reachedMonth / 12), m = res.reachedMonth % 12;
+    $("snapDetTime").textContent = y ? `${y}y ${m}m` : `${m} months`;
+  } else {
+    $("snapDetTime").textContent = `Not reached in ${p.maxMonths} months`;
+  }
+
+  // Monte Carlo times
+  const fmtMo = (mo)=>{
+    if (mo === null) return "—";
+    const y = Math.floor(mo / 12), m = mo % 12;
+    return y ? `${y}y ${m}m` : `${m} months`;
+  };
+
+  $("snapBestTime").textContent = fmtMo(conf.best);
+  $("snapP50").textContent = fmtMo(conf.p50);
+  $("snapP90").textContent = fmtMo(conf.p90);
+
+  const notes = $("snapNotes");
+  const reachedCount = conf.reachedCount;
+  if (!reachedCount){
+    notes.className = "banner small confRed";
+    notes.textContent = "No Monte Carlo runs reached the target under current assumptions. Increase purchases, improve survival/success, or reduce sales/cost pressure.";
+  } else {
+    notes.className = `banner small ${conf.cls}`;
+    notes.textContent = `${reachedCount}/${p.mcRuns} runs reached the target at all. (The confidence % above is specifically: reached by Month ${p.timeframe}.)`;
+  }
+}
   }
 
   // ---------- buttons ----------
