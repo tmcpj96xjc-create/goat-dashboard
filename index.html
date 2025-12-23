@@ -1,1421 +1,1238 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Goat Farm Dashboard</title>
-
-  <!-- More reliable CDN than jsdelivr in many regions -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-
+  <title>Goat Farm Dashboard — MK2</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
     :root{
-      --bg:#f4f6f8;
-      --card:#ffffff;
-      --ink:#0f172a;
-      --muted:#475569;
-      --line:#e2e8f0;
-      --accent:#2563eb;
-      --good:#16a34a;
-      --warn:#ca8a04;
-      --bad:#dc2626;
-      --radius:14px;
-      --fs:16px;
+      --fs: 16px;
+      --bg: #e8eaee;
+      --card: #ffffff;
+      --ink: #111;
+      --muted: #444;
+      --line: #d4d7dd;
+      --soft: rgba(0,0,0,.06);
+      --good: rgba(0,140,0,.10);
+      --warn: rgba(200,150,0,.12);
+      --bad: rgba(180,0,0,.10);
     }
     *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--ink);font-size:var(--fs)}
+    body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--ink);font-size:var(--fs)}
     .wrap{max-width:1180px;margin:0 auto;padding:16px}
     h1{margin:0 0 10px;font-size:1.25rem}
-    .small{color:var(--muted);font-size:.9rem;line-height:1.35}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin:12px 0}
+    .small{color:var(--muted);font-size:.92rem;line-height:1.35}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:12px 0}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     @media(max-width:900px){.grid{grid-template-columns:1fr}}
-    .row{display:grid;grid-template-columns:1.35fr 1fr;gap:12px;align-items:center;margin:10px 0}
+    .row{display:grid;grid-template-columns:1.25fr 1fr;gap:12px;align-items:center;margin:10px 0}
     label{font-weight:800}
-    input,select,button{
-      width:100%;padding:10px 10px;border-radius:12px;border:1px solid var(--line);
-      background:#fff;color:var(--ink);font-size:1rem
-    }
+    input,select,button{width:100%;padding:10px;border-radius:12px;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:1rem}
     button{cursor:pointer;font-weight:900}
     .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
     .tabBtn{width:auto;padding:8px 10px}
-    .tabBtn.active{outline:2px solid rgba(37,99,235,.25)}
+    .tabBtn.active{outline:2px solid rgba(0,0,0,.18)}
     .tab{display:none}
     .tab.active{display:block}
     .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
     @media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}}
-    .kpi{border:1px solid var(--line);border-radius:var(--radius);padding:12px;background:#fff}
+    .kpi{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px}
     .kpi small{display:block;color:var(--muted);font-weight:900}
-    .kpi .v{font-size:1.05rem;font-weight:900;margin-top:6px}
-    .banner{border:1px solid var(--line);border-radius:var(--radius);padding:12px;background:#fff}
-    .good{border-color:rgba(22,163,74,.35);background:rgba(22,163,74,.06)}
-    .warn{border-color:rgba(202,138,4,.35);background:rgba(202,138,4,.08)}
-    .bad{border-color:rgba(220,38,38,.35);background:rgba(220,38,38,.06)}
+    .kpi .v{font-size:1.1rem;font-weight:950;margin-top:6px}
+    .banner{border:1px solid var(--line);border-radius:14px;padding:12px;background:#fff}
+    .good{border-color:rgba(0,140,0,.35);background:var(--good)}
+    .warn{border-color:rgba(200,150,0,.35);background:var(--warn)}
+    .bad{border-color:rgba(180,0,0,.35);background:var(--bad)}
     hr{border:none;border-top:1px solid var(--line);margin:12px 0}
-
     .canvasBox{margin-top:10px}
     canvas{
-      display:block;width:100% !important;height:300px !important;max-height:300px !important;
-      background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:8px;
+      display:block;
+      width:100% !important;
+      height:290px !important;
+      max-height:290px !important;
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:8px;
     }
-
-    /* Run button + spinner */
-    .runRow{display:flex;gap:10px;align-items:center}
-    .runRow button{flex:1}
-    .spinner{
-      width:18px;height:18px;border-radius:50%;
-      border:3px solid rgba(37,99,235,.25);
-      border-top-color:rgba(37,99,235,.95);
-      animation:spin 1s linear infinite;
-      display:none;
+    .pillGroup{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+    .pill{
+      display:flex;align-items:center;gap:8px;
+      border:1px solid var(--line);background:#fff;border-radius:999px;
+      padding:8px 12px;font-weight:900;
     }
-    @keyframes spin{to{transform:rotate(360deg)}}
-
-    /* Modal (save confirmation) */
-    .modalBack{
-      position:fixed;inset:0;background:rgba(15,23,42,.35);
-      display:none;align-items:center;justify-content:center;padding:16px;
-    }
-    .modal{
-      width:min(520px,100%);background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;
-      box-shadow:0 10px 30px rgba(0,0,0,.12);
-    }
-    .modal h3{margin:0 0 8px}
-    .modal .actions{display:flex;gap:10px;margin-top:12px}
+    .pill input{width:auto;padding:0;margin:0}
+    .hint{font-size:.9rem;color:var(--muted);margin-top:6px}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
   </style>
 </head>
 
 <body>
 <div class="wrap">
-  <h1>Goat Farm Dashboard
-    <span class="small">— Purchases (M4/8/12/16/20/24/28), breeding + money + target confidence</span>
-  </h1>
+  <h1>Goat Farm Dashboard — MK2 <span class="small">• fixed gestation • retained doe first-try age 8 months • Sales Cycle tab</span></h1>
 
-  <!-- Global controls -->
+  <!-- Global Controls -->
   <div class="card">
     <div class="grid">
       <div>
         <div class="row">
-          <label title="Simulation stops when you reach this herd size (or max months).">Target herd size</label>
-          <input id="target" type="number" value="200" min="10"/>
+          <label title="Simulation stops when herd on-farm reaches this size.">Target herd size</label>
+          <input id="target" type="number" value="200" min="10" />
         </div>
         <div class="row">
-          <label title="Used for confidence: chance to hit target by this month.">Timeframe (months)</label>
-          <input id="timeframe" type="number" value="60" min="6"/>
+          <label title="Used for “Target confidence by Month X” if Monte Carlo is enabled later. For now, used as a comparison milestone.">Timeframe (months)</label>
+          <input id="timeframe" type="number" value="60" min="6" />
         </div>
         <div class="row">
-          <label title="Hard cap to prevent runaway simulation.">Max months (cap)</label>
-          <input id="maxMonths" type="number" value="120" min="24" step="12"/>
-        </div>
-        <div class="row">
-          <label title="Font size for readability.">Font size</label>
-          <input id="fontSize" type="range" min="14" max="22" value="16"/>
+          <label title="Hard cap for simulation length.">Max months (safety cap)</label>
+          <input id="maxMonths" type="number" value="120" min="24" step="12" />
         </div>
       </div>
-
       <div>
         <div class="row">
-          <label title="Monte Carlo = many randomized runs to estimate confidence (P50/P90, bands).">Monte Carlo</label>
-          <select id="mcOn">
-            <option value="on">On</option>
-            <option value="off">Off</option>
-          </select>
+          <label title="Adjust readability.">Font size</label>
+          <input id="fontSize" type="range" min="14" max="22" value="16" />
         </div>
         <div class="row">
-          <label title="How many runs to estimate confidence. 150–300 is typical.">Monte Carlo runs</label>
-          <input id="mcRuns" type="number" value="200" min="50" step="50"/>
-        </div>
-        <div class="row">
-          <label title="Show/hide uncertainty bands on charts (requires Monte Carlo ON).">Confidence bands</label>
-          <select id="bandsOn">
-            <option value="on">Show</option>
-            <option value="off">Hide</option>
-          </select>
-        </div>
-
-        <div class="runRow">
+          <label title="Click to compute and refresh all tabs.">Run model</label>
           <button id="runBtn">Run</button>
-          <div id="spin" class="spinner" aria-label="Running"></div>
         </div>
-
-        <div class="row" style="margin-top:10px">
-          <label title="Copy a prompt describing this scenario + results for analysis in ChatGPT.">Copy analysis prompt</label>
-          <button id="copyBtn">Copy</button>
+        <div class="banner small" id="runNote">
+          Charts remain static until you click <b>Run</b>.
         </div>
       </div>
     </div>
   </div>
 
+  <!-- Tabs (requested order with Sales Cycle after Goat Growth) -->
   <div class="tabs">
-    <button class="tabBtn active" data-tab="tPurch">Purchases</button>
-    <button class="tabBtn" data-tab="tGrowth">Goat Growth</button>
-    <button class="tabBtn" data-tab="tMoney">Money</button>
-    <button class="tabBtn" data-tab="tSnap">Snapshot</button>
-    <button class="tabBtn" data-tab="tAdv">Advisory</button>
-    <button class="tabBtn" data-tab="tSave">Save/Load</button>
+    <button class="tabBtn active" data-tab="tabPurch">Purchases</button>
+    <button class="tabBtn" data-tab="tabGrowth">Goat Growth</button>
+    <button class="tabBtn" data-tab="tabSales">Sales Cycle</button>
+    <button class="tabBtn" data-tab="tabMoney">Money</button>
+    <button class="tabBtn" data-tab="tabSnap">Snapshot</button>
+    <button class="tabBtn" data-tab="tabAdv">Advisory</button>
+    <button class="tabBtn" data-tab="tabSave">Save / Load</button>
   </div>
 
-  <!-- Purchases TAB -->
-  <div id="tPurch" class="tab active">
+  <!-- Purchases -->
+  <div id="tabPurch" class="tab active">
     <div class="card">
-      <b>Starting herd & purchases</b>
-      <div class="small" style="margin-top:6px">
-        Starting herd is bought at <b>3 months old</b> unless you also add adults. Young goats: become ready after
-        <b>5 months on farm</b> + <b>1 month buffer</b> before trying. Adult starters: try after <b>1 month</b>.
+      <b class="small">Starting herd (goats bought at the start)</b>
+      <div class="grid" style="margin-top:10px">
+        <div>
+          <div class="row">
+            <label title="Young starting goats are treated as ~3 months old and need time before breeding eligibility.">Start: Young does (3 months old)</label>
+            <input id="startYoungDoes" type="number" value="4" min="0" />
+          </div>
+          <div class="row">
+            <label title="Young starting bucks are treated as ~3 months old and need time before breeding service.">Start: Young bucks (3 months old)</label>
+            <input id="startYoungBucks" type="number" value="1" min="0" />
+          </div>
+        </div>
+        <div>
+          <div class="row">
+            <label title="Adult starting does become eligible after a short buffer (used for realism).">Start: Adult ready does</label>
+            <input id="startAdultDoes" type="number" value="0" min="0" />
+          </div>
+          <div class="row">
+            <label title="Adult starting bucks become eligible after a short buffer (used for realism).">Start: Adult ready bucks</label>
+            <input id="startAdultBucks" type="number" value="0" min="0" />
+          </div>
+        </div>
+      </div>
+
+      <hr/>
+
+      <b class="small">Expansion purchases (months 4, 8, 12, 16, 20, 24, 28)</b>
+      <div class="small">Purchased goats are assumed “young” and take time before they become active (same maturity logic as young starters).</div>
+      <div class="grid" style="margin-top:10px">
+        <div>
+          <div class="row"><label>Month 4: buy does / buy bucks</label>
+            <div style="display:flex;gap:10px">
+              <input id="p4d" type="number" value="0" min="0" />
+              <input id="p4b" type="number" value="0" min="0" />
+            </div>
+          </div>
+          <div class="row"><label>Month 8: buy does / buy bucks</label>
+            <div style="display:flex;gap:10px">
+              <input id="p8d" type="number" value="0" min="0" />
+              <input id="p8b" type="number" value="0" min="0" />
+            </div>
+          </div>
+          <div class="row"><label>Month 12: buy does / buy bucks</label>
+            <div style="display:flex;gap:10px">
+              <input id="p12d" type="number" value="0" min="0" />
+              <input id="p12b" type="number" value="0" min="0" />
+            </div>
+          </div>
+          <div class="row"><label>Month 16: buy does / buy bucks</label>
+            <div style="display:flex;gap:10px">
+              <input id="p16d" type="number" value="0" min="0" />
+              <input id="p16b" type="number" value="0" min="0" />
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="row"><label>Month 20: buy does / buy bucks</label>
+            <div style="display:flex;gap:10px">
+              <input id="p20d" type="number" value="0" min="0" />
+              <input id="p20b" type="number" value="0" min="0" />
+            </div>
+          </div>
+          <div class="row"><label>Month 24: buy does / buy bucks</label>
+            <div style="display:flex;gap:10px">
+              <input id="p24d" type="number" value="0" min="0" />
+              <input id="p24b" type="number" value="0" min="0" />
+            </div>
+          </div>
+          <div class="row"><label>Month 28: buy does / buy bucks</label>
+            <div style="display:flex;gap:10px">
+              <input id="p28d" type="number" value="0" min="0" />
+              <input id="p28b" type="number" value="0" min="0" />
+            </div>
+          </div>
+
+          <div class="banner small" style="margin-top:10px">
+            Purchases KPI will show <b>total bought</b> over time (does + bucks).
+          </div>
+        </div>
+      </div>
+
+      <div class="kpis" style="margin-top:12px">
+        <div class="kpi"><small>Total bought (does+bucks)</small><div class="v" id="k_buy_total">—</div></div>
+        <div class="kpi"><small>Total bought does</small><div class="v" id="k_buy_does">—</div></div>
+        <div class="kpi"><small>Total bought bucks</small><div class="v" id="k_buy_bucks">—</div></div>
+        <div class="kpi"><small>First purchase month</small><div class="v" id="k_buy_first">—</div></div>
+      </div>
+
+      <div class="canvasBox">
+        <canvas id="chartPurchTotal"></canvas>
+        <div class="small">Total goats purchased on-farm (cumulative) over time.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Goat Growth -->
+  <div id="tabGrowth" class="tab">
+    <div class="card">
+      <b class="small">Breeding settings</b>
+
+      <!-- Action 1: Growth mode toggles -->
+      <div class="pillGroup" aria-label="Growth presets">
+        <label class="pill" title="Faster herd build; tighter cycles; higher retention.">
+          <input type="radio" name="growthMode" id="modeAgg" />
+          Aggressive growth
+        </label>
+        <label class="pill" title="More conservative, planning-safe assumptions.">
+          <input type="radio" name="growthMode" id="modeCon" checked />
+          Conservative growth
+        </label>
+        <span class="pill" title="Fixed by design (Action 1).">Retained doe first-try age: <b>8 months</b></span>
+        <span class="pill" title="Fixed by design (Action 1).">Gestation: <b>5 months</b></span>
       </div>
 
       <div class="grid" style="margin-top:10px">
         <div>
           <div class="row">
-            <label title="Young goats (3 months old) at Month 0. They mature after 5 months on farm + 1 buffer month.">Start: Young does / Young bucks</label>
-            <div style="display:flex;gap:10px">
-              <input id="startYoungDoes" type="number" value="4" min="0"/>
-              <input id="startYoungBucks" type="number" value="1" min="0"/>
-            </div>
+            <label title="How often the herd does a breeding cycle.">Kidding interval (months)</label>
+            <input id="kiddingInt" type="number" value="12" min="6" max="18" />
           </div>
-
           <div class="row">
-            <label title="Adult goats at Month 0. They can try after 1 month.">Start: Adult does / Adult bucks</label>
-            <div style="display:flex;gap:10px">
-              <input id="startAdultDoes" type="number" value="0" min="0"/>
-              <input id="startAdultBucks" type="number" value="0" min="0"/>
-            </div>
+            <label title="Probability that a breeding attempt results in pregnancy.">Breeding success %</label>
+            <input id="breedSuccess" type="number" value="90" min="40" max="100" />
+          </div>
+          <div class="row">
+            <label title="Average kids per birth event.">Kids per birth</label>
+            <input id="kidsPerBirth" type="number" value="1.8" min="1" max="3.5" step="0.1" />
           </div>
 
-          <hr/>
-
-          <b class="small">Expansion purchases (each month input does / bucks)</b>
-          <div class="row"><label>Month 4 (young)</label><div style="display:flex;gap:10px"><input id="p4f" type="number" value="0" min="0"/><input id="p4m" type="number" value="0" min="0"/></div></div>
-          <div class="row"><label>Month 8 (young)</label><div style="display:flex;gap:10px"><input id="p8f" type="number" value="0" min="0"/><input id="p8m" type="number" value="0" min="0"/></div></div>
-          <div class="row"><label>Month 12 (young)</label><div style="display:flex;gap:10px"><input id="p12f" type="number" value="0" min="0"/><input id="p12m" type="number" value="0" min="0"/></div></div>
-          <div class="row"><label>Month 16 (young)</label><div style="display:flex;gap:10px"><input id="p16f" type="number" value="0" min="0"/><input id="p16m" type="number" value="0" min="0"/></div></div>
-          <div class="row"><label>Month 20 (young)</label><div style="display:flex;gap:10px"><input id="p20f" type="number" value="0" min="0"/><input id="p20m" type="number" value="0" min="0"/></div></div>
-          <div class="row"><label>Month 24 (young)</label><div style="display:flex;gap:10px"><input id="p24f" type="number" value="0" min="0"/><input id="p24m" type="number" value="0" min="0"/></div></div>
-          <div class="row"><label>Month 28 (young)</label><div style="display:flex;gap:10px"><input id="p28f" type="number" value="0" min="0"/><input id="p28m" type="number" value="0" min="0"/></div></div>
-
-          <hr/>
-          <b class="small">Adult purchases (optional) — Month 6 and 12</b>
-          <div class="row"><label>Month 6 (adult)</label><div style="display:flex;gap:10px"><input id="a6f" type="number" value="0" min="0"/><input id="a6m" type="number" value="0" min="0"/></div></div>
-          <div class="row"><label>Month 12 (adult)</label><div style="display:flex;gap:10px"><input id="a12f" type="number" value="0" min="0"/><input id="a12m" type="number" value="0" min="0"/></div></div>
+          <!-- Action 1: re-breed delay input -->
+          <div class="row">
+            <label title="After a doe gives birth, she must wait this many months before she can conceive again.">Re-breed delay (months)</label>
+            <input id="rebreedDelay" type="number" value="3" min="0" max="12" />
+          </div>
         </div>
 
         <div>
           <div class="row">
-            <label title="Buck capacity = bucks × does-per-buck. If breedable does exceed this, births are limited.">Does per buck</label>
-            <input id="doesPerBuck" type="number" value="20" min="5" max="60"/>
+            <label title="Female share of newborn kids.">Female kids %</label>
+            <input id="pctFemale" type="number" value="50" min="40" max="60" />
+          </div>
+          <div class="row">
+            <label title="Survival from birth to the age you count them as on-farm inventory.">Kid survival %</label>
+            <input id="kidSurvival" type="number" value="90" min="40" max="100" />
+          </div>
+          <div class="row">
+            <label title="Buck capacity definition: bucks × does-per-buck.">Does per buck</label>
+            <input id="doesPerBuck" type="number" value="20" min="5" max="50" />
+          </div>
+          <div class="row">
+            <label title="Share of female kids you keep to grow the herd (rest sold for breeding at 6 months).">Retain female kids %</label>
+            <input id="retainF" type="number" value="85" min="0" max="100" />
+          </div>
+        </div>
+      </div>
+
+      <hr/>
+
+      <b class="small">Sales assumptions (used for Sales Cycle + Money)</b>
+      <div class="grid" style="margin-top:10px">
+        <div>
+          <div class="row">
+            <label title="Male kids are sold at this age.">Male sale age (months)</label>
+            <input id="maleSaleAge" type="number" value="6" min="1" max="12" />
+          </div>
+          <div class="banner small">
+            Rule: Male kids are always sold. Female kids are either retained for breeding or sold for breeding at 6 months (based on Retain %).
+          </div>
+        </div>
+        <div>
+          <div class="banner small">
+            <b>Action 1 fixed biology:</b><br/>
+            • Retained females can first attempt pregnancy at <b>8 months</b>.<br/>
+            • Gestation is fixed at <b>5 months</b>.<br/>
+            • Re-breed delay controls how long after kidding a doe can conceive again.
+          </div>
+        </div>
+      </div>
+
+      <div class="kpis" style="margin-top:12px">
+        <div class="kpi"><small>Time to target</small><div class="v" id="g_time">—</div></div>
+        <div class="kpi"><small>Reached target?</small><div class="v" id="g_reach">—</div></div>
+        <div class="kpi"><small>Buck capacity status</small><div class="v" id="g_buck">—</div></div>
+        <div class="kpi"><small>Herd at target (total)</small><div class="v" id="g_herd_target_total">—</div></div>
+      </div>
+
+      <div class="canvasBox">
+        <canvas id="chartHerd"></canvas>
+        <div class="small">Herd composition over time (whole numbers): breeding does, bucks, young females, young males.</div>
+      </div>
+      <div class="canvasBox">
+        <canvas id="chartConstraint"></canvas>
+        <div class="small">Constraint: breedable does vs buck capacity, with bucks count shown as a line (2nd axis).</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sales Cycle (Action 2) -->
+  <div id="tabSales" class="tab">
+    <div class="card">
+      <b class="small">Sales Cycle</b>
+      <div class="small">This tab shows <b>when goats are sold</b> and how many leave the farm each month.</div>
+
+      <div class="kpis" style="margin-top:12px">
+        <div class="kpi"><small>Total goats sold (lifetime)</small><div class="v" id="s_totalSold">—</div></div>
+        <div class="kpi"><small>Male goats sold</small><div class="v" id="s_maleSold">—</div></div>
+        <div class="kpi"><small>Female goats sold</small><div class="v" id="s_femaleSold">—</div></div>
+        <div class="kpi"><small>First sale month</small><div class="v" id="s_firstSale">—</div></div>
+      </div>
+
+      <div class="kpis" style="margin-top:10px">
+        <div class="kpi"><small>Sales by target month</small><div class="v" id="s_byTarget">—</div></div>
+        <div class="kpi"><small>Sales by timeframe month</small><div class="v" id="s_byTimeframe">—</div></div>
+        <div class="kpi"><small>Avg monthly sales (to horizon)</small><div class="v" id="s_avgSales">—</div></div>
+        <div class="kpi"><small>Sales start effect</small><div class="v" id="s_salesNote">—</div></div>
+      </div>
+
+      <div class="canvasBox">
+        <canvas id="chartSales"></canvas>
+        <div class="small">Monthly goats sold (whole numbers): male kids vs female goats sold for breeding.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Money -->
+  <div id="tabMoney" class="tab">
+    <div class="card">
+      <b class="small">Money assumptions</b>
+      <div class="grid" style="margin-top:10px">
+        <div>
+          <div class="row"><label>Currency label</label><input id="cur" value="UGX" /></div>
+
+          <div class="row">
+            <label title="Young goat purchase prices (starting young + expansion purchases).">Buy price: young doe / young buck</label>
+            <div style="display:flex;gap:10px">
+              <input id="buyYoungDoe" type="number" value="400000" min="0" />
+              <input id="buyYoungBuck" type="number" value="400000" min="0" />
+            </div>
           </div>
 
           <div class="row">
-            <label title="Currency label for all money fields.">Currency</label>
-            <input id="cur" value="UGX"/>
+            <label title="Adult starter purchase prices (if you input adult starts).">Buy price: adult doe / adult buck</label>
+            <div style="display:flex;gap:10px">
+              <input id="buyAdultDoe" type="number" value="400000" min="0" />
+              <input id="buyAdultBuck" type="number" value="400000" min="0" />
+            </div>
+          </div>
+
+          <div class="row">
+            <label title="Sale prices used for sales events.">Sale price: male / female (breeding)</label>
+            <div style="display:flex;gap:10px">
+              <input id="sellMale" type="number" value="250000" min="0" />
+              <input id="sellFemale" type="number" value="400000" min="0" />
+            </div>
           </div>
 
           <div class="banner small">
-            KPI shows total goats bought (young + adult) across all purchase months. Month 0 startup purchases are included in Money.
-          </div>
-
-          <div class="kpis" style="margin-top:12px">
-            <div class="kpi"><small>Total goats bought</small><div class="v" id="k_buyTotal">—</div></div>
-            <div class="kpi"><small>Young bought</small><div class="v" id="k_buyYoung">—</div></div>
-            <div class="kpi"><small>Adult bought</small><div class="v" id="k_buyAdult">—</div></div>
-            <div class="kpi"><small>Startup herd</small><div class="v" id="k_startHerd">—</div></div>
-          </div>
-
-          <div class="canvasBox">
-            <canvas id="chartHerdComp"></canvas>
-            <div class="small">Herd composition over time (shows <b>total</b> on chart via tooltip; whole numbers).</div>
-          </div>
-
-          <div class="canvasBox">
-            <canvas id="chartPurchMix"></canvas>
-            <div class="small">Purchased goats over time (young vs adult). Whole numbers.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Growth TAB -->
-  <div id="tGrowth" class="tab">
-    <div class="card">
-      <b>Growth assumptions</b>
-      <div class="grid" style="margin-top:10px">
-        <div>
-          <div class="row">
-            <label title="All breedable does attempt together on the breeding month; 90% means 9/10 succeed on average.">Breeding success %</label>
-            <input id="breedSuccess" type="number" value="90" min="40" max="100"/>
-          </div>
-          <div class="row">
-            <label title="Average kids per birth.">Kids per birth</label>
-            <input id="kidsPerBirth" type="number" value="1.8" min="1" max="3.5" step="0.1"/>
-          </div>
-          <div class="row">
-            <label title="Female share of newborn kids.">Female kids %</label>
-            <input id="pctFemale" type="number" value="50" min="40" max="60"/>
-          </div>
-          <div class="row">
-            <label title="Survival from birth through early life.">Kid survival %</label>
-            <input id="kidSurvival" type="number" value="90" min="40" max="100"/>
-          </div>
-          <div class="row">
-            <label title="How often an adult doe can conceive again after giving birth (rest period). You chose 3 months.">Post-birth rest (months)</label>
-            <input id="restMonths" type="number" value="3" min="1" max="6"/>
+            Sales are recorded in the Sales Cycle tab and then reflected here as revenue.
           </div>
         </div>
 
         <div>
-          <div class="row">
-            <label title="Retained female kids can only start trying from this age. You requested 8 months.">Retained doe first-try age (months)</label>
-            <input id="retainedTryAge" type="number" value="8" min="6" max="14"/>
-          </div>
-          <div class="row">
-            <label title="Gestation is fixed at 5 months (150 days).">Gestation</label>
-            <input value="5 months (fixed)" disabled/>
-          </div>
-          <div class="row">
-            <label title="If ON, freeze sales for N months to focus on growth first.">Freeze sales?</label>
-            <select id="freezeSalesOn">
-              <option value="off">Off</option>
-              <option value="on">On</option>
-            </select>
-          </div>
-          <div class="row">
-            <label title="If freeze sales ON: no sales happen before this month number.">Freeze sales months</label>
-            <input id="freezeMonths" type="number" value="0" min="0" max="60"/>
-          </div>
+          <div class="row"><label>Feed per goat / month</label><input id="feed" type="number" value="2500" min="0" /></div>
+          <div class="row"><label>Medication per goat / month</label><input id="med" type="number" value="0" min="0" /></div>
+          <div class="row"><label>Other variable per goat / month</label><input id="othVar" type="number" value="0" min="0" /></div>
+
+          <div class="row"><label>Property / year</label><input id="propYr" type="number" value="1500000" min="0" /></div>
+          <div class="row"><label>Labor / month</label><input id="laborMo" type="number" value="0" min="0" /></div>
+          <div class="row"><label>Vet / month</label><input id="vetMo" type="number" value="0" min="0" /></div>
+          <div class="row"><label>Security / month</label><input id="secMo" type="number" value="0" min="0" /></div>
+          <div class="row"><label>Transport / month</label><input id="trMo" type="number" value="0" min="0" /></div>
+          <div class="row"><label>Admin / month</label><input id="adMo" type="number" value="0" min="0" /></div>
         </div>
       </div>
 
       <div class="kpis" style="margin-top:12px">
-        <div class="kpi"><small>Reached target?</small><div class="v" id="g_reach">—</div></div>
-        <div class="kpi"><small>Time to target (det)</small><div class="v" id="g_time">—</div></div>
-        <div class="kpi"><small>Herd at target (total)</small><div class="v" id="g_totalAt">—</div></div>
-        <div class="kpi"><small>Herd at target (does/bucks)</small><div class="v" id="g_dbAt">—</div></div>
-      </div>
-
-      <div class="canvasBox">
-        <canvas id="chartConstraint"></canvas>
-        <div class="small">Constraint: Breedable does vs Buck capacity + Bucks line (2nd axis). Whole numbers.</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Money TAB -->
-  <div id="tMoney" class="tab">
-    <div class="card">
-      <b>Money assumptions</b>
-      <div class="grid" style="margin-top:10px">
-        <div>
-          <div class="row">
-            <label title="Young goat purchase price (3 months old).">Buy price (young): doe / buck</label>
-            <div style="display:flex;gap:10px">
-              <input id="buyYoungF" type="number" value="400000" min="0"/>
-              <input id="buyYoungM" type="number" value="400000" min="0"/>
-            </div>
-          </div>
-
-          <div class="row">
-            <label title="Adult goat purchase price.">Buy price (adult): doe / buck</label>
-            <div style="display:flex;gap:10px">
-              <input id="buyAdultF" type="number" value="400000" min="0"/>
-              <input id="buyAdultM" type="number" value="400000" min="0"/>
-            </div>
-          </div>
-
-          <div class="row">
-            <label title="Male kid sale price.">Sell price: male kid</label>
-            <input id="sellM" type="number" value="250000" min="0"/>
-          </div>
-
-          <div class="row">
-            <label title="Female sold for breeding at 6 months.">Sell price: female (breeding)</label>
-            <input id="sellF" type="number" value="400000" min="0"/>
-          </div>
-
-          <div class="row">
-            <label title="Male kids sold at this age (months).">Male sale age (months)</label>
-            <input id="maleSaleAge" type="number" value="6" min="1" max="12"/>
-          </div>
-
-          <div class="row">
-            <label title="Female kids: keep this % to grow; the remainder sold for breeding at 6 months.">Retain female kids %</label>
-            <input id="retainF" type="number" value="85" min="0" max="100"/>
-          </div>
-        </div>
-
-        <div>
-          <div class="row">
-            <label>Feed / goat / month</label>
-            <input id="feed" type="number" value="2500" min="0"/>
-          </div>
-          <div class="row">
-            <label>Medication / goat / month</label>
-            <input id="med" type="number" value="0" min="0"/>
-          </div>
-          <div class="row">
-            <label>Other variable / goat / month</label>
-            <input id="othVar" type="number" value="0" min="0"/>
-          </div>
-
-          <hr/>
-
-          <div class="row">
-            <label>Property / year</label>
-            <input id="propYr" type="number" value="1500000" min="0"/>
-          </div>
-          <div class="row">
-            <label>Labor / month (fixed)</label>
-            <input id="laborMo" type="number" value="0" min="0"/>
-          </div>
-          <div class="row">
-            <label>Vet / month (fixed)</label>
-            <input id="vetMo" type="number" value="0" min="0"/>
-          </div>
-          <div class="row">
-            <label>Security / month (fixed)</label>
-            <input id="secMo" type="number" value="0" min="0"/>
-          </div>
-          <div class="row">
-            <label>Transport / month (fixed)</label>
-            <input id="trMo" type="number" value="0" min="0"/>
-          </div>
-          <div class="row">
-            <label>Admin / month (fixed)</label>
-            <input id="adMo" type="number" value="0" min="0"/>
-          </div>
-        </div>
-      </div>
-
-      <div class="kpis" style="margin-top:12px">
-        <div class="kpi"><small>Cash needed to start (buffer)</small><div class="v" id="m_startCash">—</div></div>
-        <div class="kpi"><small>Cash-flow sustaining</small><div class="v" id="m_sustain">—</div></div>
-        <div class="kpi"><small>Full payback</small><div class="v" id="m_payback">—</div></div>
-        <div class="kpi"><small>Inventory value (farm)</small><div class="v" id="m_inv">—</div></div>
-      </div>
-
-      <div class="canvasBox">
-        <canvas id="chartMonthlyNet"></canvas>
-        <div class="small">Monthly net (all-in). Month 0 includes startup purchases. Green when positive, red when negative.</div>
+        <div class="kpi"><small>Operating break-even (month)</small><div class="v" id="m_opBE">—</div></div>
+        <div class="kpi"><small>Farm break-even (month)</small><div class="v" id="m_fullBE">—</div></div>
+        <div class="kpi"><small>Total revenue (to horizon)</small><div class="v" id="m_revTot">—</div></div>
+        <div class="kpi"><small>Total costs (to horizon)</small><div class="v" id="m_costTot">—</div></div>
       </div>
 
       <div class="canvasBox">
         <canvas id="chartCumRevCost"></canvas>
-        <div class="small">Cumulative revenue vs cumulative total costs (operating + purchases). Shows when revenue overtakes costs.</div>
+        <div class="small">Cumulative revenue vs cumulative costs (operating + purchases + startup). Whole numbers; run until target month or safety cap.</div>
       </div>
 
       <div class="canvasBox">
-        <canvas id="chartRevenueVsCost"></canvas>
-        <div class="small">Monthly revenue vs monthly total costs (operating + purchases spikes).</div>
+        <canvas id="chartMonthlyNet"></canvas>
+        <div class="small">Monthly net (all-in). Includes month 0 startup purchases. Line turns green after net becomes positive.</div>
+      </div>
+
+      <div class="canvasBox">
+        <canvas id="chartMonthlyRevCost"></canvas>
+        <div class="small">Monthly revenue vs monthly operating costs (helps you see if the farm is working month-to-month).</div>
       </div>
     </div>
   </div>
 
-  <!-- Snapshot TAB -->
-  <div id="tSnap" class="tab">
+  <!-- Snapshot -->
+  <div id="tabSnap" class="tab">
     <div class="card">
-      <b>Snapshot</b>
+      <b class="small">Snapshot</b>
+
       <div class="kpis" style="margin-top:12px">
-        <div class="kpi"><small>Time to target (det)</small><div class="v" id="s_det">—</div></div>
-        <div class="kpi"><small>P50 / P90 (MC)</small><div class="v" id="s_p">—</div></div>
-        <div class="kpi"><small>Target confidence (by timeframe)</small><div class="v" id="s_conf">—</div></div>
-        <div class="kpi"><small>Net revenue at target</small><div class="v" id="s_netAt">—</div></div>
+        <div class="kpi"><small>Time to target (deterministic)</small><div class="v" id="x_time">—</div></div>
+        <div class="kpi"><small>Target confidence by Month X</small><div class="v" id="x_conf">—</div></div>
+        <div class="kpi"><small>Net position at target month</small><div class="v" id="x_netTarget">—</div></div>
+        <div class="kpi"><small>Herd composition at target</small><div class="v" id="x_compTarget">—</div></div>
       </div>
 
-      <div class="grid" style="margin-top:12px">
-        <div class="banner small" id="s_herdAt">
-          Herd at target: —
-        </div>
-        <div class="banner small" id="s_moneyAt">
-          At target month: —
-        </div>
+      <div class="banner small" id="x_assump" style="margin-top:12px">
+        <b>Assumptions used by this model (plain English):</b><br/>
+        • Gestation is fixed at 5 months (150 days).<br/>
+        • Retained female kids can first try to conceive at 8 months.<br/>
+        • After a doe gives birth, she waits the re-breed delay before she can conceive again.<br/>
+        • Breeding is limited by buck capacity = bucks × does-per-buck.<br/>
+        • Male kids are sold at your chosen age; female kids are retained % vs sold for breeding at 6 months.<br/>
+        • Costs are modeled as variable (per goat per month) + fixed (monthly).<br/>
       </div>
 
       <div class="canvasBox">
         <canvas id="chartWaterfall"></canvas>
-        <div class="small">By target month (or max months): Total Revenue vs Total Operating Costs vs Total Purchase Spend → Net Position.</div>
-      </div>
-
-      <details class="card" style="margin-top:12px">
-        <summary style="cursor:pointer;font-weight:900">Model assumptions (plain English)</summary>
-        <div class="small" style="margin-top:8px">
-          <b>Breeding/biology</b><br/>
-          • Gestation fixed at 5 months (150 days)<br/>
-          • Starting herd bought at 3 months old: ready after 5 months on-farm + 1 month buffer before trying<br/>
-          • Starting adults: can try after 1 month<br/>
-          • After giving birth, a doe waits 3 months (rest) before it can conceive again<br/>
-          • Retained female kids can only start trying from 8 months+<br/>
-          • Breeding limited by buck capacity = bucks × does-per-buck<br/>
-          • Success rate and survival rates applied as averages<br/><br/>
-
-          <b>Sales</b><br/>
-          • Male kids sold at your chosen age (months)<br/>
-          • Female kids: retained % vs sold for breeding at 6 months<br/>
-          • You can freeze sales for N months to focus on growth<br/><br/>
-
-          <b>Money</b><br/>
-          • Variable costs per goat per month = feed + med + other<br/>
-          • Fixed costs constant monthly (property/12 + labor + vet + security + transport + admin)<br/>
-          • Month 0 includes startup purchase spend<br/>
-          • Cash-flow sustaining: from some month onward, cumulative cash never falls below 0 again (no external injection needed)<br/>
-          • Full payback: first month cumulative cash becomes ≥ 0 (startup fully recovered)<br/><br/>
-
-          <b>Monte Carlo (if ON)</b><br/>
-          • We randomize biological rates in a tight range to estimate confidence and bands<br/>
-          • We do not randomize prices (avoids weird values like 79,999)
-        </div>
-      </details>
-    </div>
-  </div>
-
-  <!-- Advisory TAB -->
-  <div id="tAdv" class="tab">
-    <div class="card">
-      <b>Advisory</b>
-      <div class="small" style="margin-top:6px">
-        This tab gives simple hints (not overcomplicated) to improve reaching target within timeframe and ending net position.
-      </div>
-
-      <div class="banner small" id="advBox" style="margin-top:12px">
-        Run the model to see advisory hints.
+        <div class="small">By horizon: Total Revenue vs Operating Costs vs Purchases → Net position.</div>
       </div>
     </div>
   </div>
 
-  <!-- Save/Load TAB -->
-  <div id="tSave" class="tab">
+  <!-- Advisory -->
+  <div id="tabAdv" class="tab">
     <div class="card">
-      <b>Save / Load scenario</b>
-      <div class="small" style="margin-top:6px">
-        Save a scenario file to your computer and reload later to restore all inputs.
+      <b class="small">Advisory (simple)</b>
+      <div class="banner small" id="advBox">
+        Run the model to get advice. This tab will highlight the most obvious limiter (bucks, retention, cycle length, costs).
       </div>
+    </div>
+  </div>
 
-      <div class="grid" style="margin-top:12px">
+  <!-- Save / Load -->
+  <div id="tabSave" class="tab">
+    <div class="card">
+      <b class="small">Save / Load scenario</b>
+      <div class="small">This saves your inputs as a JSON file on your computer and lets you reload them later.</div>
+
+      <div class="grid" style="margin-top:10px">
         <div>
-          <div class="row">
-            <label>Scenario name</label>
-            <input id="scName" value="my_goat_plan"/>
-          </div>
-          <button id="saveBtn">Save scenario</button>
+          <div class="row"><label>Scenario name</label><input id="scName" value="MK2-scenario" /></div>
+          <button id="btnSave">Save scenario (download JSON)</button>
+          <div class="hint">Tip: Keep your MK1 baseline file separately.</div>
         </div>
         <div>
-          <div class="row">
-            <label>Load scenario file</label>
-            <input id="loadFile" type="file" accept="application/json"/>
-          </div>
-          <button id="loadBtn">Load scenario</button>
+          <div class="row"><label>Load scenario JSON</label><input id="fileLoad" type="file" accept=".json" /></div>
+          <button id="btnApplyLoad">Apply loaded scenario</button>
+          <div class="hint">After loading, click <b>Run</b> to refresh charts.</div>
         </div>
       </div>
+
+      <div class="banner small" id="saveMsg" style="display:none;margin-top:10px"></div>
+      <div class="banner small" id="loadMsg" style="display:none;margin-top:10px"></div>
     </div>
   </div>
 
-</div>
-
-<!-- Save confirmation modal -->
-<div id="modalBack" class="modalBack">
-  <div class="modal">
-    <h3>Saved ✅</h3>
-    <div class="small">Your scenario file has been saved to your computer.</div>
-    <div class="actions">
-      <button id="closeModal">Close</button>
-    </div>
-  </div>
-</div>
+</div> <!-- /wrap -->
 
 <script>
-/* =========================
-   Utilities
-========================= */
+/* -------------------- helpers -------------------- */
 const $ = (id)=>document.getElementById(id);
-const N = (id)=>Number(($(id)?.value ?? 0) || 0);
+const N = (id)=>Number($(id).value||0);
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
-const roundInt = (x)=>Math.round(x);
-const money = (n)=>{
-  const cur = ($("cur").value||"UGX").trim();
+const fmtInt=(n)=>Math.round(n).toLocaleString();
+const money=(n)=>{
+  const cur = ($("cur")?.value || "UGX").trim();
   return `${cur} ${Math.round(n).toLocaleString()}`;
 };
-function moFmt(m){
-  if(m===null || m===undefined) return "Never";
-  const y = Math.floor(m/12), mm = m%12;
-  return y ? `${y}y ${mm}m` : `${mm} months`;
-}
-function parseListMonths(str){
-  return new Set((str||"").split(",").map(s=>parseInt(s.trim(),10)).filter(x=>x>=1 && x<=12));
+function moFmt(mo){
+  if(mo===null || mo===undefined) return "Never";
+  const y=Math.floor(mo/12), m=mo%12;
+  return y?`${y}y ${m}m`:`${m} months`;
 }
 
-/* =========================
-   Tabs
-========================= */
-document.querySelectorAll(".tabBtn").forEach(btn=>{
-  btn.addEventListener("click", ()=>{
-    document.querySelectorAll(".tabBtn").forEach(b=>b.classList.remove("active"));
-    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
-    btn.classList.add("active");
-    $(btn.dataset.tab).classList.add("active");
+/* -------------------- tabs -------------------- */
+(function initTabs(){
+  document.querySelectorAll(".tabBtn").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      document.querySelectorAll(".tabBtn").forEach(x=>x.classList.remove("active"));
+      document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+      b.classList.add("active");
+      $(b.dataset.tab).classList.add("active");
+    });
   });
-});
+})();
 
-/* =========================
-   Font size
-========================= */
-$("fontSize").addEventListener("input", ()=>{
-  document.documentElement.style.setProperty("--fs", $("fontSize").value+"px");
-});
-
-/* =========================
-   Purchases schedule
-========================= */
-const YOUNG_PUR_MONTHS = [4,8,12,16,20,24,28];
-function youngPurchaseAtMonth(m){
-  const map = {
-    4:{f:N("p4f"), m:N("p4m")},
-    8:{f:N("p8f"), m:N("p8m")},
-    12:{f:N("p12f"), m:N("p12m")},
-    16:{f:N("p16f"), m:N("p16m")},
-    20:{f:N("p20f"), m:N("p20m")},
-    24:{f:N("p24f"), m:N("p24m")},
-    28:{f:N("p28f"), m:N("p28m")},
-  };
-  return map[m] || {f:0,m:0};
-}
-function adultPurchaseAtMonth(m){
-  const map = {
-    6:{f:N("a6f"), m:N("a6m")},
-    12:{f:N("a12f"), m:N("a12m")},
-  };
-  return map[m] || {f:0,m:0};
-}
-function totalBoughtKPIs(){
-  // month0 starters count as purchases too
-  const startYoung = N("startYoungDoes")+N("startYoungBucks");
-  const startAdult = N("startAdultDoes")+N("startAdultBucks");
-
-  let young=0, adult=0;
-  for(const mm of YOUNG_PUR_MONTHS){
-    const p = youngPurchaseAtMonth(mm);
-    young += p.f + p.m;
+/* -------------------- Action 1: presets -------------------- */
+const PRESET = {
+  aggressive: {
+    kiddingInt: 9,
+    breedSuccess: 93,
+    kidsPerBirth: 1.9,
+    rebreedDelay: 2,
+    retainF: 95
+  },
+  conservative: {
+    kiddingInt: 12,
+    breedSuccess: 90,
+    kidsPerBirth: 1.8,
+    rebreedDelay: 3,
+    retainF: 85
   }
-  [6,12].forEach(mm=>{
-    const p=adultPurchaseAtMonth(mm);
-    adult += p.f + p.m;
-  });
+};
+function applyPreset(name){
+  const p = PRESET[name];
+  $("kiddingInt").value = p.kiddingInt;
+  $("breedSuccess").value = p.breedSuccess;
+  $("kidsPerBirth").value = p.kidsPerBirth;
+  $("rebreedDelay").value = p.rebreedDelay;
+  $("retainF").value = p.retainF;
+}
+$("modeAgg").addEventListener("change", ()=>{ if($("modeAgg").checked) applyPreset("aggressive"); });
+$("modeCon").addEventListener("change", ()=>{ if($("modeCon").checked) applyPreset("conservative"); });
 
-  $("k_buyYoung").textContent = String(startYoung + young);
-  $("k_buyAdult").textContent = String(startAdult + adult);
-  $("k_buyTotal").textContent = String(startYoung + startAdult + young + adult);
-  $("k_startHerd").textContent = String(startYoung + startAdult);
+/* -------------------- fixed biology (Action 1) -------------------- */
+const FIX_GEST = 5;          // 150 days ~ 5 months
+const FIX_FIRST_TRY = 8;     // retained doe first-try age fixed at 8 months
+const FIX_FEMALE_SALE_AGE = 6;
+
+/* -------------------- purchases schedule -------------------- */
+const PURCHASE_MONTHS = new Set([4,8,12,16,20,24,28]); // months since start
+function purchAtMonth(m){
+  // m is 0-based month index, but UI is 1-based human months.
+  const mm = m; // keep as 0-based internal
+  const human = mm; // month number in UI is same as internal count for these specific fixed purchases
+  // our purchase months are expressed as "month 4" meaning after 4 months from start => internal m==4
+  let d=0,b=0;
+  if(human===4){ d=N("p4d"); b=N("p4b"); }
+  else if(human===8){ d=N("p8d"); b=N("p8b"); }
+  else if(human===12){ d=N("p12d"); b=N("p12b"); }
+  else if(human===16){ d=N("p16d"); b=N("p16b"); }
+  else if(human===20){ d=N("p20d"); b=N("p20b"); }
+  else if(human===24){ d=N("p24d"); b=N("p24b"); }
+  else if(human===28){ d=N("p28d"); b=N("p28b"); }
+  return {d,b};
 }
 
-/* =========================
-   Model parameters
-========================= */
-const GEST = 5; // 150 days ~ 5 months
-
+/* -------------------- model params -------------------- */
 function getParams(){
+  const target = clamp(N("target"), 10, 100000);
+  const timeframe = clamp(N("timeframe"), 6, 240);
+  const maxMonths = clamp(N("maxMonths"), 24, 360);
+
+  const kiddingInt = clamp(N("kiddingInt"), 6, 18);
+  const rebreedDelay = clamp(N("rebreedDelay"), 0, 12);
+
+  const breedSuccess = clamp(N("breedSuccess"), 40, 100) / 100;
+  const kidsPerBirth = clamp(Number($("kidsPerBirth").value||1.8), 1, 3.5);
+
+  const pctFemale = clamp(N("pctFemale"), 40, 60) / 100;
+  const kidSurvival = clamp(N("kidSurvival"), 40, 100) / 100;
+
+  const doesPerBuck = clamp(N("doesPerBuck"), 5, 50);
+  const retainF = clamp(N("retainF"), 0, 100) / 100;
+  const maleSaleAge = clamp(N("maleSaleAge"), 1, 12);
+
+  // starting herd
+  const startYoungDoes = clamp(N("startYoungDoes"), 0, 999999);
+  const startYoungBucks = clamp(N("startYoungBucks"), 0, 999999);
+  const startAdultDoes = clamp(N("startAdultDoes"), 0, 999999);
+  const startAdultBucks = clamp(N("startAdultBucks"), 0, 999999);
+
+  // money
+  const buyYoungDoe = N("buyYoungDoe"), buyYoungBuck=N("buyYoungBuck");
+  const buyAdultDoe = N("buyAdultDoe"), buyAdultBuck=N("buyAdultBuck");
+  const sellMale=N("sellMale"), sellFemale=N("sellFemale");
+
+  const feed=N("feed"), med=N("med"), othVar=N("othVar");
+  const fixedMo=(N("propYr")/12)+N("laborMo")+N("vetMo")+N("secMo")+N("trMo")+N("adMo");
+
   return {
-    target: N("target"),
-    timeframe: N("timeframe"),
-    maxMonths: N("maxMonths"),
-    mcOn: $("mcOn").value,
-    mcRuns: clamp(N("mcRuns"), 0, 5000),
-    bandsOn: $("bandsOn").value,
-
-    // purchases / capacity
-    doesPerBuck: clamp(N("doesPerBuck"), 1, 200),
-
-    // breeding
-    breedSuccess: clamp(N("breedSuccess"), 0, 100)/100,
-    kidsPerBirth: Math.max(1, N("kidsPerBirth")),
-    pctFemale: clamp(N("pctFemale"), 0, 100)/100,
-    kidSurvival: clamp(N("kidSurvival"), 0, 100)/100,
-    restMonths: clamp(N("restMonths"), 0, 12),
-    retainedTryAge: clamp(N("retainedTryAge"), 0, 24),
-
-    // sales logic
-    freezeSalesOn: $("freezeSalesOn").value,
-    freezeMonths: clamp(N("freezeMonths"), 0, 120),
-    maleSaleAge: clamp(N("maleSaleAge"), 1, 12),
-    retainF: clamp(N("retainF"), 0, 100)/100,
-
-    // money
-    buyYoungF: N("buyYoungF"), buyYoungM: N("buyYoungM"),
-    buyAdultF: N("buyAdultF"), buyAdultM: N("buyAdultM"),
-    sellM: N("sellM"), sellF: N("sellF"),
-    feed: N("feed"), med: N("med"), othVar: N("othVar"),
-    propYr: N("propYr"),
-    laborMo: N("laborMo"), vetMo: N("vetMo"), secMo: N("secMo"), trMo: N("trMo"), adMo: N("adMo"),
-
-    // starting herd
-    startYoungDoes: N("startYoungDoes"), startYoungBucks: N("startYoungBucks"),
-    startAdultDoes: N("startAdultDoes"), startAdultBucks: N("startAdultBucks"),
+    target, timeframe, maxMonths,
+    kiddingInt, rebreedDelay,
+    breedSuccess, kidsPerBirth,
+    pctFemale, kidSurvival,
+    doesPerBuck, retainF, maleSaleAge,
+    startYoungDoes, startYoungBucks, startAdultDoes, startAdultBucks,
+    buyYoungDoe, buyYoungBuck, buyAdultDoe, buyAdultBuck,
+    sellMale, sellFemale,
+    feed, med, othVar, fixedMo
   };
 }
 
-/* =========================
-   Deterministic simulation
-   - whole-number outputs
-   - breeding cycles: “together” monthly eligibility
-========================= */
-function simulateDet(p){
-  // We track cohorts by age (months on farm) for:
-  // - young does/bucks (start or purchased) to become “breed-eligible” after 5 months + 1 buffer
-  // - adult does (already mature) but can only try after 1 month on farm (starter & purchased adult)
-  // - retained female kids: can try after retainedTryAge
-  // - males: sold at maleSaleAge
-  // - females sold for breeding: sold at 6 months (unless freeze)
+/* -------------------- simulation core --------------------
+State we track (whole-number approach via rounding at outputs):
+- breedingDoes: adult does in the breeding pool (some pregnant, some resting)
+- bucksActive: adult bucks (service)
+- young females (retained) pipeline until 8 months first-try age
+- pregnancies pipeline (5 months) counted by does that conceived
+- post-kidding rest pipeline (rebreedDelay) counted by does resting
+- kids pipelines for sales (male to sale age, female to 6 months if not retained)
+- sales events per month (Action 2)
+- money: month 0 startup purchase + monthly net
+---------------------------------------------------------- */
 
-  const MAX = p.maxMonths;
+function simulate(p){
+  const rows=[];
 
-  // Young starter cohorts (3 months old): they become eligible after 5 months + 1 buffer = 6 months on-farm
-  const YOUNG_READY = 6; // 5 mature + 1 buffer
-  let youngDoes = Array(YOUNG_READY).fill(0);
-  let youngBucks = Array(YOUNG_READY).fill(0);
-  youngDoes[0] = p.startYoungDoes;
-  youngBucks[0] = p.startYoungBucks;
+  // Age pipelines (counts can be fractional; we round at chart time)
+  const fRetCoh = Array(FIX_FIRST_TRY).fill(0);       // retained females age 0..7 months
+  const mCoh = Array(p.maleSaleAge).fill(0);          // male kids age 0..saleAge-1
+  const fSaleCoh = Array(FIX_FEMALE_SALE_AGE).fill(0);// female kids sold at 6 months
 
-  // Adult starters: can try after 1 month on-farm
-  const ADULT_READY = 1;
-  let adultDoes = Array(ADULT_READY).fill(0);
-  let adultBucks = Array(ADULT_READY).fill(0);
-  adultDoes[0] = p.startAdultDoes;
-  adultBucks[0] = p.startAdultBucks;
+  // Pregnancy + rest pipelines (counts of does in those states)
+  const preg = Array(FIX_GEST).fill(0);               // 0..4 months pregnant
+  const rest = Array(p.rebreedDelay).fill(0);         // 0..delay-1 months resting after kidding
 
-  // Retained female kids cohort until they can try
-  const TRY_AGE = Math.max(1, p.retainedTryAge);
-  let retainedF = Array(TRY_AGE).fill(0);
+  // Starter “young” goats maturity: they start at 3 months old.
+  // They must reach 8 months to first-try => 5 months on farm before eligible to conceive.
+  const youngStarterF = Array(5).fill(0); // months remaining until they enter retained pipeline at age 8 (directly into breeding pool as eligible)
+  const youngStarterM = Array(5).fill(0); // months remaining until buck becomes active
+  youngStarterF[0] = p.startYoungDoes;
+  youngStarterM[0] = p.startYoungBucks;
 
-  // Female kids sold for breeding at 6 months
-  const FSALE_AGE = 6;
-  let fForSale = Array(FSALE_AGE).fill(0);
+  // Adult starters: eligible after a 1-month buffer (your later preference, kept simple here)
+  const adultBuffer = [0]; // 1 month buffer => shift into active at month 1
+  let adultBufferDoes = p.startAdultDoes;
+  let adultBufferBucks = p.startAdultBucks;
 
-  // Male kids held until sale age
-  const MSALE_AGE = Math.max(1, p.maleSaleAge);
-  let mKids = Array(MSALE_AGE).fill(0);
+  let breedingDoes = 0;
+  let bucksActive = 0;
 
-  // Pregnancy pipeline: births happen after GEST months
-  let preg = Array(MAX + GEST + 5).fill(0);
+  // Money
+  const startupSpend =
+    p.startYoungDoes*p.buyYoungDoe +
+    p.startYoungBucks*p.buyYoungBuck +
+    p.startAdultDoes*p.buyAdultDoe +
+    p.startAdultBucks*p.buyAdultBuck;
 
-  // Rest pipeline: after birth, the doe rests p.restMonths before becoming eligible again.
-  // We'll approximate by reducing eligible pool via a “resting bucket”.
-  const REST = Math.max(0, p.restMonths);
-  let resting = Array(Math.max(REST,1)).fill(0);
+  let cumRev=0, cumCost=0;
+  let cumNet = -startupSpend;       // include month 0 purchases
+  let opBE = null, fullBE = null;
 
-  // Money tracking (cumulative cash net)
-  let cumCash = 0;
-  let worstCum = 0;
-  let worstMonth = 0;
+  // Sales counters (Action 2)
+  let totalMaleSold=0, totalFemaleSold=0;
+  let firstSaleMonth = null;
 
-  // month 0 startup purchases (Action: must be included)
-  const startSpend =
-    p.startYoungDoes*p.buyYoungF + p.startYoungBucks*p.buyYoungM +
-    p.startAdultDoes*p.buyAdultF + p.startAdultBucks*p.buyAdultM;
-  cumCash -= startSpend;
-  worstCum = Math.min(worstCum, cumCash);
+  // Purchases tracking
+  let cumBoughtDoes = p.startYoungDoes + p.startAdultDoes;
+  let cumBoughtBucks = p.startYoungBucks + p.startAdultBucks;
+  const purchCum = []; // cumulative bought total per month for Purchases chart
 
-  // Break-even definitions
-  // - Full payback: first month cumCash >= 0
-  let fullPayback = null;
-  // - Cash-flow sustaining: first month from which cumCash never goes below 0 again
-  let cashFlowSustain = null;
+  // For horizon (stop at target or max)
+  let reachedMonth = null;
+  let targetIndex = null;
 
-  // Series
-  const rows = [];
+  // Helper: herd on-farm inventory = breeding does + bucks + all kids being held + in pipelines
+  function herdTotal(){
+    const youngF = fRetCoh.reduce((a,b)=>a+b,0);
+    const maleKids = mCoh.reduce((a,b)=>a+b,0);
+    const femaleForSale = fSaleCoh.reduce((a,b)=>a+b,0);
+    const pregTot = preg.reduce((a,b)=>a+b,0);
+    const restTot = rest.reduce((a,b)=>a+b,0);
 
-  // helper: total bucks available (eligible)
-  const sum = (arr)=>arr.reduce((a,b)=>a+b,0);
+    const startersF = youngStarterF.reduce((a,b)=>a+b,0);
+    const startersM = youngStarterM.reduce((a,b)=>a+b,0);
+    const adultsWaiting = adultBufferDoes + adultBufferBucks;
 
-  for(let m=0; m<=MAX; m++){
-    // 1) bring in scheduled purchases
-    if(m>0){
-      // young purchases
-      const yp = youngPurchaseAtMonth(m);
-      if(yp.f || yp.m){
-        youngDoes[0] += yp.f;
-        youngBucks[0] += yp.m;
-        cumCash -= (yp.f*p.buyYoungF + yp.m*p.buyYoungM);
-      }
-      // adult purchases at month 6/12
-      const ap = adultPurchaseAtMonth(m);
-      if(ap.f || ap.m){
-        adultDoes[0] += ap.f;
-        adultBucks[0] += ap.m;
-        cumCash -= (ap.f*p.buyAdultF + ap.m*p.buyAdultM);
-      }
+    // breedingDoes already includes pregnant/resting does; we avoid double counting by using breedingDoes, not preg/rest totals separately.
+    return (breedingDoes + bucksActive + youngF + maleKids + femaleForSale + startersF + startersM + adultsWaiting);
+  }
+
+  // We treat breeding eligibility:
+  // eligible does = breedingDoes - pregnant - resting
+  function eligibleDoes(){
+    const pregTot = preg.reduce((a,b)=>a+b,0);
+    const restTot = rest.reduce((a,b)=>a+b,0);
+    return Math.max(0, breedingDoes - pregTot - restTot);
+  }
+
+  // Costs are charged on all goats on farm (inventory)
+  function monthlyOperatingCost(inv){
+    return inv * (p.feed + p.med + p.othVar) + p.fixedMo;
+  }
+
+  // month loop
+  for(let m=0; m<=p.maxMonths; m++){
+    // month 0: startup already applied to cumNet; we still record a row at m=0 (pre-dynamics)
+    // Dynamics start at m=0 as "first month on farm".
+
+    // 1) move adult starters from buffer to active after 1 month
+    if(m===1){
+      breedingDoes += adultBufferDoes;
+      bucksActive += adultBufferBucks;
+      adultBufferDoes = 0;
+      adultBufferBucks = 0;
     }
 
-    // 2) shift cohorts (aging)
-    const shift = (arr)=>{
-      const out = arr[arr.length-1] || 0;
-      for(let i=arr.length-1;i>=1;i--) arr[i]=arr[i-1];
-      arr[0]=0;
-      return out;
-    };
-
-    const newBreedableDoes_fromYoung = shift(youngDoes); // becomes breedable
-    const newServiceBucks_fromYoung = shift(youngBucks);
-
-    const newBreedableDoes_fromAdult = shift(adultDoes); // adult becomes try-eligible after 1 month
-    const newServiceBucks_fromAdult = shift(adultBucks);
-
-    // retained females become try-eligible after retainedTryAge
-    const newBreedableDoes_fromRetained = shift(retainedF);
-
-    // resting returns (if REST=0, treat as immediate)
-    let backFromRest = 0;
-    if(REST>0){
-      backFromRest = shift(resting);
+    // 2) advance young starter maturity pipelines (5 months to become eligible)
+    // For does: after 5 months on farm, they are effectively at 8 months => can join breeding pool (as eligible)
+    const starterFOut = youngStarterF[youngStarterF.length-1] || 0;
+    for(let i=youngStarterF.length-1;i>=1;i--) youngStarterF[i]=youngStarterF[i-1];
+    youngStarterF[0]=0;
+    if(starterFOut>0){
+      breedingDoes += starterFOut;
     }
 
-    // 3) compute births this month from pregnancies GEST months ago
-    let births = 0;
-    if(m - GEST >= 0) births = preg[m-GEST] * p.kidsPerBirth * p.kidSurvival;
+    // For bucks: after 5 months on farm they become active service bucks
+    const starterMOut = youngStarterM[youngStarterM.length-1] || 0;
+    for(let i=youngStarterM.length-1;i>=1;i--) youngStarterM[i]=youngStarterM[i-1];
+    youngStarterM[0]=0;
+    if(starterMOut>0){
+      bucksActive += starterMOut;
+    }
 
-    // split births
-    const fBorn = births * p.pctFemale;
-    const mBorn = births - fBorn;
+    // 3) expansion purchases this month
+    const pur = purchAtMonth(m);
+    if(pur.d || pur.b){
+      // treat as young purchases: add to youngStarter pipelines (they are “young on farm”)
+      if(youngStarterF.length>0) youngStarterF[0] += pur.d;
+      if(youngStarterM.length>0) youngStarterM[0] += pur.b;
 
-    // sales freeze
-    const salesFrozen = (p.freezeSalesOn==="on") && (m < p.freezeMonths);
+      cumBoughtDoes += pur.d;
+      cumBoughtBucks += pur.b;
+    }
 
-    // females: retain vs sell for breeding
+    purchCum.push(cumBoughtDoes + cumBoughtBucks);
+
+    // 4) breeding attempt occurs on a schedule (every kiddingInt months)
+    // Eligible does at month m attempt, limited by buck capacity.
+    let conceptions = 0;
+    if(m>0 && (m % p.kiddingInt === 0)){
+      const elig = eligibleDoes();
+      const capacity = bucksActive * p.doesPerBuck;
+      const attempted = Math.min(elig, capacity);
+      conceptions = attempted * p.breedSuccess;
+
+      // place conceptions into pregnancy month 0
+      preg[0] += conceptions;
+    }
+
+    // 5) advance pregnancy pipeline, produce births at end
+    const birthDoes = preg[preg.length-1] || 0;
+    for(let i=preg.length-1;i>=1;i--) preg[i]=preg[i-1];
+    preg[0]=0; // new conceptions already added above; we keep it 0 here because we used preg[0]+=conceptions before shift
+    // Correction: we already shifted. So restore conceptions into preg[0] after shift:
+    preg[0] += conceptions;
+
+    // births happen from does that were at last gestation bucket
+    let birthsKids = 0;
+    if(birthDoes>0){
+      birthsKids = birthDoes * p.kidsPerBirth * p.kidSurvival;
+    }
+
+    const fBorn = birthsKids * p.pctFemale;
+    const mBorn = birthsKids - fBorn;
+
+    // 6) after kidding, does enter rest pipeline (rebreedDelay)
+    if(p.rebreedDelay>0 && birthDoes>0){
+      rest[0] += birthDoes;
+    }
+
+    // advance rest pipeline: when rest ends, does become eligible again (they remain in breedingDoes; this just reduces resting count)
+    if(p.rebreedDelay>0){
+      for(let i=rest.length-1;i>=1;i--) rest[i]=rest[i-1];
+      rest[0]=0;
+    }
+
+    // 7) allocate female kids: retain vs sell at 6 months
     const fRet = fBorn * p.retainF;
-    const fSell = fBorn - fRet;
+    const fSale = fBorn - fRet;
 
-    if(retainedF.length>0) retainedF[0] += fRet;
-    if(fForSale.length>0) fForSale[0] += fSell;
-    if(mKids.length>0) mKids[0] += mBorn;
+    // push into cohorts
+    if(fRetCoh.length>0) fRetCoh[0] += fRet;
+    if(mCoh.length>0) mCoh[0] += mBorn;
+    if(fSaleCoh.length>0) fSaleCoh[0] += fSale;
 
-    // 4) sell cohorts (if not frozen)
-    let soldM = 0, soldF = 0;
-    if(!salesFrozen){
-      soldM = mKids[mKids.length-1] || 0;
-      soldF = fForSale[fForSale.length-1] || 0;
-    }
-    // shift selling cohorts regardless (they age even if you freeze; we treat freeze as “you keep them”)
-    // If frozen, we keep them instead of selling: move them into retained/breed pools as appropriate.
-    // To keep minimal + not complicated: frozen means "no sales", so we just don't remove them and keep them in last bucket.
-    // Implementation: only shift + clear last bucket when not frozen.
-    if(!salesFrozen){
-      shift(mKids);
-      shift(fForSale);
+    // advance retained female cohort; after 8 months they join breeding pool
+    const toBreeding = fRetCoh[fRetCoh.length-1] || 0;
+    for(let i=fRetCoh.length-1;i>=1;i--) fRetCoh[i]=fRetCoh[i-1];
+    fRetCoh[0]=0;
+    if(toBreeding>0){
+      breedingDoes += toBreeding;
     }
 
-    // revenue
-    const rev = soldM*p.sellM + soldF*p.sellF;
-    cumCash += rev;
-
-    // 5) determine current herd components (on-farm)
-    // breedable pools
-    // We'll keep running totals of breedable does/bucks:
-    // Instead of tracking as a single scalar + cohorts, we approximate by summing:
-    // - all does eligible: those that have matured + returned from rest
-    // We'll store breedableDoes and serviceBucks as scalars updated each month.
-    // Initialize scalars on first row creation:
-    if(m===0){
-      // create scalars on rows as 0 initially
+    // 8) sales events
+    let maleSold = 0;
+    if(mCoh.length>0){
+      maleSold = mCoh[mCoh.length-1] || 0;
+      for(let i=mCoh.length-1;i>=1;i--) mCoh[i]=mCoh[i-1];
+      mCoh[0]=0;
     }
 
-    // We'll store these scalars in closure:
-    if(m===0){
-      simulateDet.breedableDoes = 0;
-      simulateDet.serviceBucks = 0;
-      simulateDet.restingDoes = 0;
+    let femaleSold = 0;
+    if(fSaleCoh.length>0){
+      femaleSold = fSaleCoh[fSaleCoh.length-1] || 0;
+      for(let i=fSaleCoh.length-1;i>=1;i--) fSaleCoh[i]=fSaleCoh[i-1];
+      fSaleCoh[0]=0;
     }
 
-    simulateDet.breedableDoes += newBreedableDoes_fromYoung + newBreedableDoes_fromAdult + newBreedableDoes_fromRetained + backFromRest;
-    simulateDet.serviceBucks += newServiceBucks_fromYoung + newServiceBucks_fromAdult;
-
-    // 6) breeding event (everyone together when eligible)
-    // Eligible does are limited by buck capacity
-    const buckCap = simulateDet.serviceBucks * p.doesPerBuck;
-    const eligibleDoes = Math.min(simulateDet.breedableDoes, buckCap);
-
-    // ALSO: does that just gave birth must go into rest.
-    // We approximate: number of births / kidsPerBirth gives number of does that delivered.
-    const deliveringDoes = (p.kidsPerBirth>0) ? (births / p.kidsPerBirth) : 0;
-
-    // move delivering does into rest (remove from breedable now)
-    if(deliveringDoes>0){
-      simulateDet.breedableDoes = Math.max(0, simulateDet.breedableDoes - deliveringDoes);
-      if(REST>0){
-        resting[0] += deliveringDoes;
-      } else {
-        // no rest means immediately eligible next cycle
-        simulateDet.breedableDoes += deliveringDoes;
-      }
+    if((maleSold + femaleSold) > 0 && firstSaleMonth===null){
+      firstSaleMonth = m;
     }
+    totalMaleSold += maleSold;
+    totalFemaleSold += femaleSold;
 
-    // This month conceptions:
-    // Adults and eligible does conceive with breedSuccess.
-    // NOTE: we use “together” conceptions each month from eligible pool (simple, stable).
-    const conceived = eligibleDoes * p.breedSuccess;
+    // 9) money this month (month 0 includes only startup spend, but we still compute ops costs & revenue if any)
+    const inv = herdTotal();
+    const opCost = monthlyOperatingCost(inv);
 
-    preg[m] = conceived;
+    // purchase spend this month (expansion only; startup already counted)
+    const purchaseSpend = (pur.d*p.buyYoungDoe) + (pur.b*p.buyYoungBuck);
+    const revenue = (maleSold * p.sellMale) + (femaleSold * p.sellFemale);
 
-    // 7) costs
-    // herd inventory includes everyone on-farm (breedable does + young pipelines + retained + fForSale + mKids + resting + bucks)
-    const youngTotal = sum(youngDoes)+sum(youngBucks);
-    const adultQueueTotal = sum(adultDoes)+sum(adultBucks);
-    const retainedTotal = sum(retainedF);
-    const fForSaleTotal = sum(fForSale);
-    const mKidsTotal = sum(mKids);
-    const restingTotal = REST>0 ? sum(resting) : 0;
+    // update cumulative
+    cumRev += revenue;
+    cumCost += (opCost + purchaseSpend);
 
-    const doesBreedable = simulateDet.breedableDoes;
-    const bucksActive = simulateDet.serviceBucks;
+    const net = revenue - opCost - purchaseSpend;
+    // month 0 net includes startup cost by having cumNet initialized negative already; we still add month net now:
+    cumNet += net;
 
-    const herdTotal =
-      doesBreedable + bucksActive +
-      youngTotal + adultQueueTotal +
-      retainedTotal + fForSaleTotal + mKidsTotal +
-      restingTotal;
+    if(opBE===null && revenue >= opCost) opBE = m;
+    if(fullBE===null && cumNet >= 0) fullBE = m;
 
-    const varCost = herdTotal * (p.feed + p.med + p.othVar);
-    const fixedCost = (p.propYr/12) + p.laborMo + p.vetMo + p.secMo + p.trMo + p.adMo;
-    const totalCostThisMonth = varCost + fixedCost;
+    // 10) record row
+    const pregTot = preg.reduce((a,b)=>a+b,0);
+    const restTot = rest.reduce((a,b)=>a+b,0);
 
-    cumCash -= totalCostThisMonth;
+    const youngF = fRetCoh.reduce((a,b)=>a+b,0);
+    const youngM = mCoh.reduce((a,b)=>a+b,0);
+    const fForSale = fSaleCoh.reduce((a,b)=>a+b,0);
 
-    if(cumCash < worstCum){
-      worstCum = cumCash;
-      worstMonth = m;
-    }
-
-    // check payback
-    if(fullPayback===null && cumCash>=0) fullPayback = m;
+    const herd = inv;
+    const capacityDoes = bucksActive * p.doesPerBuck;
+    const elig = eligibleDoes();
 
     rows.push({
       m,
-      does: doesBreedable,
-      bucks: bucksActive,
-      young: youngTotal,
-      retainedF: retainedTotal,
-      youngMales: mKidsTotal,
-      fForSale: fForSaleTotal,
-      resting: restingTotal,
-      herdTotal,
-      buckCap,
-      revenue: rev,
-      varCost,
-      fixedCost,
-      purchaseSpend: (m===0? startSpend:0), // month0 already booked into cumCash; keep for chart reference
-      totalCost: totalCostThisMonth,
-      netAllIn: (rev - totalCostThisMonth), // purchases already netted into cumCash at purchase time
-      cumCash
+      herd,
+      breedingDoes,
+      bucksActive,
+      youngF,
+      youngM,
+      fForSale,
+      eligible: elig,
+      capacityDoes,
+      pregnant: pregTot,
+      resting: restTot,
+      maleSold,
+      femaleSold,
+      revenue,
+      opCost,
+      purchaseSpend,
+      net,
+      cumRev,
+      cumCost,
+      cumNet,
+      cumBought: cumBoughtDoes + cumBoughtBucks,
+      cumBoughtDoes,
+      cumBoughtBucks
     });
 
-    // stop early if hit target (for charts clarity), but still need to compute sustain/payback to max months.
-    // We will NOT break; we compute to max months so KPIs can show Never if needed.
+    // stop when hit target for clarity
+    if(reachedMonth===null && herd >= p.target){
+      reachedMonth = m;
+      targetIndex = rows.length-1;
+      break;
+    }
   }
 
-  // cash-flow sustaining:
-  // find earliest month where from that month onward cumCash never drops below 0
-  // (simple scan from end)
-  let minFromEnd = Infinity;
-  const okFrom = Array(rows.length).fill(false);
-  for(let i=rows.length-1;i>=0;i--){
-    minFromEnd = Math.min(minFromEnd, rows[i].cumCash);
-    okFrom[i] = (minFromEnd >= 0);
-  }
-  cashFlowSustain = okFrom.findIndex(v=>v===true);
-  if(cashFlowSustain === -1) cashFlowSustain = null;
-
-  // reached month
-  let reached = null;
-  for(const r of rows){
-    if(r.herdTotal >= p.target){ reached = r.m; break; }
-  }
-
-  return {rows, reached, worstCum, worstMonth, fullPayback, cashFlowSustain};
-}
-
-/* =========================
-   Monte Carlo (optional)
-   - randomize biological rates only (tight ranges)
-========================= */
-function rng(seed){let s=seed>>>0;return ()=>{s^=s<<13;s>>>=0;s^=s>>17;s>>>=0;s^=s<<5;s>>>=0;return (s>>>0)/4294967296;};}
-function jitter(r, base, pct){ return base*(1 + ((r()-0.5)*2*pct)); }
-
-function monteCarlo(p){
-  const runs = (p.mcOn==="on") ? Math.max(50, Math.floor(p.mcRuns)) : 0;
-  if(!runs) return {pct:null,p50:null,p90:null,bands:null};
-
-  const reached = [];
-  const tf = p.timeframe;
-
-  for(let i=0;i<runs;i++){
-    const r = rng(123456 + i*99991);
-    const q = {...p};
-    // tight perturbations
-    q.kidsPerBirth = clamp(jitter(r, p.kidsPerBirth, 0.12), 1, 3.5);
-    q.kidSurvival = clamp(jitter(r, p.kidSurvival, 0.10), 0.40, 1.0);
-    q.breedSuccess = clamp(jitter(r, p.breedSuccess, 0.08), 0.40, 1.0);
-
-    const res = simulateDet(q);
-    if(res.reached!==null) reached.push(res.reached);
-  }
-
-  reached.sort((a,b)=>a-b);
-  const hitTF = reached.filter(x=>x<=tf).length;
-  const pct = Math.round((hitTF / runs) * 100);
-
-  const pctile=(q)=>{
-    if(!reached.length) return null;
-    const idx = Math.floor(q*(reached.length-1));
-    return reached[idx];
-  };
-
-  return {pct, p50:pctile(0.50), p90:pctile(0.90)};
-}
-
-/* =========================
-   Charts (single stable chart instances)
-========================= */
-let chHerdComp=null, chPurchMix=null, chConstraint=null, chMonthlyNet=null, chCumRevCost=null, chRevCost=null, chWaterfall=null;
-
-function destroyAll(){
-  [chHerdComp,chPurchMix,chConstraint,chMonthlyNet,chCumRevCost,chRevCost,chWaterfall].forEach(ch=>ch && ch.destroy());
-  chHerdComp=chPurchMix=chConstraint=chMonthlyNet=chCumRevCost=chRevCost=chWaterfall=null;
-}
-
-function intTicks(){
+  // determine horizon index for charts if target not reached
+  const horizonIndex = (targetIndex!==null) ? targetIndex : Math.min(rows.length-1, p.maxMonths);
   return {
-    ticks: {
-      callback: (v)=>Math.round(v).toLocaleString()
+    rows,
+    reachedMonth,
+    horizonIndex,
+    startupSpend,
+    opBE,
+    fullBE,
+    totals: {
+      totalMaleSold,
+      totalFemaleSold,
+      firstSaleMonth,
+      cumRev,
+      cumCost,
+      cumNet,
+      cumBoughtDoes,
+      cumBoughtBucks
     }
   };
 }
 
-function sliceToHorizon(rows, reached, timeframe, maxMonths){
-  // For charts: show until reached month (if reached), else timeframe, but never beyond maxMonths
-  let h = maxMonths;
-  if(reached!==null) h = Math.min(reached, maxMonths);
-  else h = Math.min(timeframe, maxMonths);
-  return rows.filter(r=>r.m<=h);
-}
+/* -------------------- charts -------------------- */
+let chPurch=null, chHerd=null, chCons=null, chSales=null, chCum=null, chNet=null, chMo=null, chWF=null;
 
-/* =========================
-   Advisory (simple)
-========================= */
-function advisory(p, det){
-  const reached = det.reached;
-  const tf = p.timeframe;
-
-  if(reached===null){
-    return `You did not reach ${p.target} by Month ${p.maxMonths}. Likely constraints: (1) buck capacity, (2) too much sales early, (3) not enough front-loaded purchases. Try: add 1–2 bucks early, increase Month 4/8 does, or freeze sales for 6–12 months.`;
-  }
-
-  const msgs = [];
-  if(reached > tf) msgs.push(`You reach target at ${moFmt(reached)} which is after your timeframe (${tf} months). Consider adding more does in Month 4/8 (front-load).`);
-  else msgs.push(`You reach target by ${moFmt(reached)} within your timeframe.`);
-
-  // buck tightness at target month
-  const at = det.rows.find(r=>r.m===reached) || det.rows[det.rows.length-1];
-  const util = at.buckCap>0 ? (at.does/at.buckCap) : 999;
-  if(util>1) msgs.push(`Buck capacity is limiting at target. Add bucks earlier (Month 4/8) or raise does-per-buck only if realistic.`);
-  else if(util>0.85) msgs.push(`Buck capacity is tight near target. Consider +1 buck.`);
-  else msgs.push(`Buck capacity looks healthy.`);
-
-  // net end position
-  const end = det.rows[det.rows.length-1];
-  if(end.cumCash<0) msgs.push(`Net cash is still negative at Month ${p.maxMonths}. Improve by freezing sales less (if on), raising sale prices, reducing fixed costs, or reducing late purchases.`);
-  else msgs.push(`Net cash becomes positive within the cap — good sign for sustainability.`);
-
-  return msgs.join(" ");
-}
-
-/* =========================
-   Render
-========================= */
-function render(){
-  totalBoughtKPIs();
-
-  const p = getParams();
-  const det = simulateDet(p);
-  const mc = monteCarlo(p);
-
-  // update KPIs (Growth)
-  $("g_reach").textContent = det.reached===null ? "No" : "Yes";
-  $("g_time").textContent = det.reached===null ? "Never (within cap)" : moFmt(det.reached);
-
-  const rows = det.rows;
-  const horizonRows = sliceToHorizon(rows, det.reached, p.timeframe, p.maxMonths);
-  const labels = horizonRows.map(r=>r.m);
-
-  // herd at target info
-  let at = null;
-  if(det.reached!==null) at = rows.find(r=>r.m===det.reached);
-  if(!at) at = horizonRows[horizonRows.length-1];
-
-  $("g_totalAt").textContent = String(roundInt(at.herdTotal));
-  $("g_dbAt").textContent = `${roundInt(at.does)} / ${roundInt(at.bucks)}`;
-
-  // Money KPIs
-  const cashNeeded = Math.max(0, -det.worstCum);
-  $("m_startCash").textContent = money(cashNeeded);
-  $("m_sustain").textContent = det.cashFlowSustain===null ? "Never" : `Month ${det.cashFlowSustain}`;
-  $("m_payback").textContent = det.fullPayback===null ? "Never" : `Month ${det.fullPayback}`;
-
-  // Inventory valuation (Option A): value herd on-farm using input prices:
-  // - classify “young inventory” vs “adult inventory” approximately:
-  //   treat breedable does/bucks as adult value, and the pipelines (young/retained/for-sale/mkids/resting) as young value.
-  const invAdult = at.does * p.buyAdultF + at.bucks * p.buyAdultM;
-  const invYoungCount = (at.young + at.retainedF + at.youngMales + at.fForSale + at.resting);
-  // split young value by assumed sex: use buyYoungF for half, buyYoungM for half (simple & stable)
-  const invYoung = (invYoungCount/2)*p.buyYoungF + (invYoungCount/2)*p.buyYoungM;
-  $("m_inv").textContent = money(invAdult + invYoung);
-
-  // Snapshot KPIs
-  $("s_det").textContent = det.reached===null ? "Never" : moFmt(det.reached);
-  if(p.mcOn==="on"){
-    $("s_p").textContent = `${mc.p50===null?"—":moFmt(mc.p50)} / ${mc.p90===null?"—":moFmt(mc.p90)}`;
-    $("s_conf").textContent = mc.pct===null ? "—" : `${mc.pct}%`;
-  } else {
-    $("s_p").textContent = "MC Off";
-    $("s_conf").textContent = "MC Off";
-  }
-
-  // Net revenue at target month (or horizon end)
-  const targetMonth = (det.reached!==null) ? det.reached : horizonRows[horizonRows.length-1].m;
-  const at2 = rows.find(r=>r.m===targetMonth) || rows[rows.length-1];
-  $("s_netAt").textContent = money(at2.cumCash);
-
-  // herd composition box
-  $("s_herdAt").innerHTML =
-    `<b>Herd at month ${targetMonth}:</b> Total <b>${roundInt(at2.herdTotal)}</b> — ` +
-    `Does <b>${roundInt(at2.does)}</b>, Bucks <b>${roundInt(at2.bucks)}</b>, Young <b>${roundInt(at2.young)}</b>, ` +
-    `Retained F <b>${roundInt(at2.retainedF)}</b>, Young M <b>${roundInt(at2.youngMales)}</b>.`;
-
-  // money at target box
-  // compute totals to targetMonth
-  let totalRev=0, totalOp=0, totalPurch=0;
-  for(const r of rows){
-    if(r.m>targetMonth) break;
-    totalRev += r.revenue;
-    totalOp += (r.varCost + r.fixedCost);
-    // purchases are booked directly into cumCash; for the summary, show startup purchases as purchase spend:
-    if(r.m===0) totalPurch += (p.startYoungDoes*p.buyYoungF + p.startYoungBucks*p.buyYoungM + p.startAdultDoes*p.buyAdultF + p.startAdultBucks*p.buyAdultM);
-    // plus any scheduled purchases: we estimate from cumCash deltas is messy; instead compute from inputs directly:
-    // keep it simple: show startup purchases only as purchaseSpend summary; the monthly spikes are visible on net chart.
-  }
-  $("s_moneyAt").innerHTML =
-    `<b>Money at month ${targetMonth}:</b> Total revenue <b>${money(totalRev)}</b>, Total operating costs <b>${money(totalOp)}</b>, ` +
-    `Startup purchases <b>${money(totalPurch)}</b> → Net position <b>${money(at2.cumCash)}</b>.`;
-
-  // Advisory
-  $("advBox").textContent = advisory(p, det);
-
-  // Copy prompt button
-  $("copyBtn").onclick = async ()=>{
-    const summary = {
-      target:p.target, timeframe:p.timeframe, maxMonths:p.maxMonths,
-      reached: det.reached,
-      cashNeeded: cashNeeded,
-      cashFlowSustain: det.cashFlowSustain,
-      fullPayback: det.fullPayback,
-      herdAtTarget: {
-        month: targetMonth,
-        total: roundInt(at2.herdTotal),
-        does: roundInt(at2.does),
-        bucks: roundInt(at2.bucks)
+function makeChart(canvasId, type, labels, datasets, options={}){
+  const ctx = $(canvasId).getContext("2d");
+  return new Chart(ctx, {
+    type,
+    data: { labels, datasets },
+    options: {
+      responsive:true,
+      maintainAspectRatio:false,
+      interaction:{mode:"index",intersect:false},
+      plugins:{
+        legend:{labels:{color:"#111", font:{weight:"800"}}},
+        tooltip:{enabled:true}
       },
-      moneyAtTarget: {
-        cumCash: Math.round(at2.cumCash),
-        totalRevenue: Math.round(totalRev),
-        totalOpCosts: Math.round(totalOp)
-      },
-      mc: (p.mcOn==="on") ? mc : {status:"off"}
-    };
-    const prompt =
-`Analyze my goat farm scenario and suggest improvements:
-- Target herd: ${p.target}
-- Timeframe: ${p.timeframe} months
-- Max months cap: ${p.maxMonths}
-- Deterministic time-to-target: ${det.reached===null?"Never":det.reached+" months"}
-- Cash needed to start (buffer): ${cashNeeded}
-- Cash-flow sustaining month: ${det.cashFlowSustain===null?"Never":det.cashFlowSustain}
-- Full payback month: ${det.fullPayback===null?"Never":det.fullPayback}
-- Herd at target month ${targetMonth}: total=${roundInt(at2.herdTotal)}, does=${roundInt(at2.does)}, bucks=${roundInt(at2.bucks)}
-- Net position at target: ${Math.round(at2.cumCash)}
-- Total revenue to target: ${Math.round(totalRev)}
-- Total operating costs to target: ${Math.round(totalOp)}
-- Monte Carlo: ${p.mcOn==="on" ? `ON (confidence ${mc.pct}%, P50 ${mc.p50}, P90 ${mc.p90})` : "OFF"}
-
-Give me:
-1) Purchase suggestions for months 4/8/12/16/20/24/28 to hit target faster,
-2) Buck/does mix changes if capacity is limiting,
-3) Money adjustments to end net position positive,
-4) A short action plan.`;
-
-    try{
-      await navigator.clipboard.writeText(prompt);
-      // small feedback by temporarily changing button text
-      const old = $("copyBtn").textContent;
-      $("copyBtn").textContent = "Copied ✓";
-      setTimeout(()=>$("copyBtn").textContent=old, 1200);
-    }catch(e){
-      alert("Copy failed. Your browser may block clipboard. You can manually copy from console if needed.");
-      console.log(prompt);
-    }
-  };
-
-  // ---- Charts ----
-  destroyAll();
-
-  // Purchases mix series
-  const boughtYoung = horizonRows.map(r=>{
-    const yp = youngPurchaseAtMonth(r.m);
-    return roundInt(yp.f + yp.m + ((r.m===0)? (p.startYoungDoes+p.startYoungBucks):0));
-  });
-  const boughtAdult = horizonRows.map(r=>{
-    const ap = adultPurchaseAtMonth(r.m);
-    return roundInt(ap.f + ap.m + ((r.m===0)? (p.startAdultDoes+p.startAdultBucks):0));
-  });
-
-  // Herd composition series
-  const doesS = horizonRows.map(r=>roundInt(r.does));
-  const bucksS = horizonRows.map(r=>roundInt(r.bucks));
-  const youngS = horizonRows.map(r=>roundInt(r.young + r.retainedF + r.fForSale + r.youngMales + r.resting));
-  const totalS = horizonRows.map(r=>roundInt(r.herdTotal));
-
-  // Herd composition chart
-  chHerdComp = new Chart($("chartHerdComp").getContext("2d"),{
-    type:"line",
-    data:{
-      labels,
-      datasets:[
-        {label:"Total herd", data: totalS, borderWidth:3, pointRadius:0, tension:.25},
-        {label:"Breedable does", data: doesS, borderWidth:2, pointRadius:0, tension:.25},
-        {label:"Bucks", data: bucksS, borderWidth:2, pointRadius:0, tension:.25},
-        {label:"Other on-farm (young + cohorts)", data: youngS, borderWidth:2, pointRadius:0, tension:.25}
-      ]
-    },
-    options:{
-      responsive:true,interaction:{mode:"index",intersect:false},
-      scales:{x:intTicks(), y:intTicks()}
-    }
-  });
-
-  // Purchases chart
-  chPurchMix = new Chart($("chartPurchMix").getContext("2d"),{
-    type:"bar",
-    data:{
-      labels,
-      datasets:[
-        {label:"Young bought (this month)", data: boughtYoung},
-        {label:"Adult bought (this month)", data: boughtAdult}
-      ]
-    },
-    options:{
-      responsive:true,interaction:{mode:"index",intersect:false},
-      scales:{x:intTicks(), y:intTicks()}
-    }
-  });
-
-  // Constraint chart with 2nd axis for bucks
-  const buckCapS = horizonRows.map(r=>roundInt(r.buckCap));
-  chConstraint = new Chart($("chartConstraint").getContext("2d"),{
-    type:"line",
-    data:{
-      labels,
-      datasets:[
-        {label:"Breedable does", data: doesS, borderWidth:3, pointRadius:0, tension:.25, yAxisID:"y"},
-        {label:"Buck capacity (bucks×ratio)", data: buckCapS, borderWidth:2, pointRadius:0, tension:.25, borderDash:[6,4], yAxisID:"y"},
-        {label:"Bucks (count)", data: bucksS, borderWidth:2, pointRadius:0, tension:.25, yAxisID:"y2"}
-      ]
-    },
-    options:{
-      responsive:true,interaction:{mode:"index",intersect:false},
       scales:{
-        x:intTicks(),
-        y:{...intTicks(), position:"left"},
-        y2:{...intTicks(), position:"right", grid:{drawOnChartArea:false}}
-      }
+        x:{ticks:{color:"#111"}, grid:{color:"rgba(0,0,0,.08)"}},
+        y:{ticks:{color:"#111"}, grid:{color:"rgba(0,0,0,.08)"}}
+      },
+      ...options
     }
-  });
-
-  // Money series
-  const monthlyRev = horizonRows.map(r=>Math.round(r.revenue));
-  const monthlyTotCost = horizonRows.map(r=>Math.round(r.totalCost)); // operating only (purchases already booked into cumCash at purchase time)
-  // To show purchases as spikes on revenue-vs-cost chart, we reconstruct from inputs:
-  const monthlyPurch = horizonRows.map(r=>{
-    if(r.m===0){
-      return Math.round(
-        p.startYoungDoes*p.buyYoungF + p.startYoungBucks*p.buyYoungM +
-        p.startAdultDoes*p.buyAdultF + p.startAdultBucks*p.buyAdultM
-      );
-    }
-    const yp=youngPurchaseAtMonth(r.m);
-    const ap=adultPurchaseAtMonth(r.m);
-    return Math.round(yp.f*p.buyYoungF + yp.m*p.buyYoungM + ap.f*p.buyAdultF + ap.m*p.buyAdultM);
-  });
-
-  // Monthly net all-in: revenue - (operating costs + purchases)
-  const monthlyNetAll = horizonRows.map((r,i)=>Math.round(monthlyRev[i] - monthlyTotCost[i] - monthlyPurch[i]));
-
-  // cumulative revenue vs cumulative total costs (operating+ purchases)
-  let cumR=0, cumC=0;
-  const cumRev = monthlyRev.map(v=>{cumR+=v; return Math.round(cumR);});
-  const cumCost = monthlyTotCost.map((v,i)=>{cumC += (v + monthlyPurch[i]); return Math.round(cumC);});
-
-  // Monthly Net chart with segment coloring
-  chMonthlyNet = new Chart($("chartMonthlyNet").getContext("2d"),{
-    type:"line",
-    data:{labels, datasets:[{
-      label:"Monthly net (all-in)",
-      data: monthlyNetAll,
-      borderWidth:3,
-      pointRadius:0,
-      tension:.25,
-      segment:{
-        borderColor: ctx => (ctx.p0.parsed.y>=0 && ctx.p1.parsed.y>=0) ? "rgba(22,163,74,.95)" : "rgba(220,38,38,.95)"
-      }
-    }]},
-    options:{responsive:true,interaction:{mode:"index",intersect:false}, scales:{x:intTicks(), y:intTicks()}}
-  });
-
-  // Cumulative revenue vs cumulative costs
-  chCumRevCost = new Chart($("chartCumRevCost").getContext("2d"),{
-    type:"line",
-    data:{labels, datasets:[
-      {label:"Cumulative revenue", data:cumRev, borderWidth:3, pointRadius:0, tension:.25},
-      {label:"Cumulative total costs (operating+purchases)", data:cumCost, borderWidth:3, pointRadius:0, tension:.25}
-    ]},
-    options:{responsive:true,interaction:{mode:"index",intersect:false}, scales:{x:intTicks(), y:intTicks()}}
-  });
-
-  // Monthly revenue vs costs chart (with purchase spikes)
-  chRevCost = new Chart($("chartRevenueVsCost").getContext("2d"),{
-    type:"line",
-    data:{labels, datasets:[
-      {label:"Revenue", data:monthlyRev, borderWidth:3, pointRadius:0, tension:.25},
-      {label:"Operating costs", data:monthlyTotCost, borderWidth:2, pointRadius:0, tension:.25},
-      {label:"Purchases (spikes)", data:monthlyPurch, borderWidth:2, pointRadius:0, tension:.25, borderDash:[6,4]}
-    ]},
-    options:{responsive:true,interaction:{mode:"index",intersect:false}, scales:{x:intTicks(), y:intTicks()}}
-  });
-
-  // Waterfall-like stacked bars (simple)
-  // At target month: totals (rev, op costs, purchases) and net
-  const revTot = Math.round(totalRev);
-  const opTot = Math.round(totalOp);
-  const purchTot = Math.round(totalPurch);
-  const netPos = Math.round(at2.cumCash);
-
-  chWaterfall = new Chart($("chartWaterfall").getContext("2d"),{
-    type:"bar",
-    data:{
-      labels:["Totals to target"],
-      datasets:[
-        {label:"Total Revenue", data:[revTot]},
-        {label:"Total Operating Costs", data:[opTot]},
-        {label:"Startup Purchase Spend", data:[purchTot]},
-        {label:"Net Position", data:[netPos]}
-      ]
-    },
-    options:{responsive:true,interaction:{mode:"index",intersect:false}, scales:{x:intTicks(), y:intTicks()}}
   });
 }
 
-/* =========================
-   Save/Load (file to computer)
-========================= */
+/* -------------------- advisory -------------------- */
+function buildAdvice(p, sim){
+  const rows = sim.rows;
+  const last = rows[sim.horizonIndex] || rows[rows.length-1];
+  if(!last) return "Run the model to get advice.";
+
+  const util = (last.capacityDoes>0) ? (last.eligible / last.capacityDoes) : 0;
+  let limiter = "";
+  if(last.capacityDoes===0 && last.bucksActive===0 && last.breedingDoes>0) limiter = "You have does but no active bucks. Add bucks or buy adult buck(s).";
+  else if(last.eligible > last.capacityDoes) limiter = "Buck capacity is limiting. Add bucks or reduce does-per-buck.";
+  else limiter = "Buck capacity looks OK. Your main levers are cycle length, retention, and costs.";
+
+  const speed = p.kiddingInt<=9 ? "Aggressive" : p.kiddingInt>=12 ? "Conservative" : "Balanced";
+
+  const moneyNote = (sim.fullBE===null)
+    ? "Farm break-even not reached within the simulated horizon. To improve net position: increase sale prices, reduce costs, or slow purchases."
+    : `Farm break-even is reached around ${moFmt(sim.fullBE)}.`;
+
+  return `
+    <b>What’s limiting you most right now:</b> ${limiter}<br/><br/>
+    <b>Growth style:</b> ${speed} (kidding interval ${p.kiddingInt} months, re-breed delay ${p.rebreedDelay} months)<br/>
+    <b>Quick wins:</b> If time-to-target is too long, try: (1) shorten kidding interval, (2) increase retain %, (3) add bucks to avoid capacity limits.<br/><br/>
+    <b>Money:</b> ${moneyNote}
+  `;
+}
+
+/* -------------------- save / load -------------------- */
+let loadedScenario=null;
+
 function getAllInputs(){
-  const ids = [
-    "target","timeframe","maxMonths","fontSize","mcOn","mcRuns","bandsOn",
+  const ids=[
+    // global
+    "target","timeframe","maxMonths","fontSize",
+    // purchases
     "startYoungDoes","startYoungBucks","startAdultDoes","startAdultBucks",
-    "p4f","p4m","p8f","p8m","p12f","p12m","p16f","p16m","p20f","p20m","p24f","p24m","p28f","p28m",
-    "a6f","a6m","a12f","a12m",
-    "doesPerBuck","breedSuccess","kidsPerBirth","pctFemale","kidSurvival","restMonths","retainedTryAge",
-    "freezeSalesOn","freezeMonths",
-    "cur","buyYoungF","buyYoungM","buyAdultF","buyAdultM","sellM","sellF","maleSaleAge","retainF",
+    "p4d","p4b","p8d","p8b","p12d","p12b","p16d","p16b","p20d","p20b","p24d","p24b","p28d","p28b",
+    // growth
+    "kiddingInt","breedSuccess","kidsPerBirth","rebreedDelay","pctFemale","kidSurvival","doesPerBuck","retainF","maleSaleAge",
+    // money
+    "cur","buyYoungDoe","buyYoungBuck","buyAdultDoe","buyAdultBuck","sellMale","sellFemale",
     "feed","med","othVar","propYr","laborMo","vetMo","secMo","trMo","adMo",
-    "scName"
+    // mode
+    "modeAgg","modeCon"
   ];
-  const obj = {};
+  const out={};
   ids.forEach(id=>{
-    const el = $(id);
-    if(!el) return;
-    obj[id] = (el.type==="number" || el.type==="range") ? N(id) : el.value;
-  });
-  return obj;
-}
-function applyInputs(obj){
-  Object.entries(obj).forEach(([id,val])=>{
     const el=$(id);
     if(!el) return;
-    if(el.type==="number" || el.type==="range") el.value = val;
-    else el.value = val;
+    if(el.type==="radio") out[id]=el.checked;
+    else out[id]=el.value;
   });
-  // apply font immediately
-  document.documentElement.style.setProperty("--fs", $("fontSize").value+"px");
+  return out;
+}
+function applyAllInputs(obj){
+  Object.entries(obj||{}).forEach(([id,val])=>{
+    const el=$(id);
+    if(!el) return;
+    if(el.type==="radio") el.checked=!!val;
+    else el.value=val;
+  });
 }
 
-function openModal(){
-  $("modalBack").style.display="flex";
+/* -------------------- render -------------------- */
+function run(){
+  // font size
+  document.documentElement.style.setProperty("--fs", $("fontSize").value + "px");
+
+  const p = getParams();
+  const sim = simulate(p);
+  const rows = sim.rows;
+  if(!rows.length) return;
+
+  const h = sim.horizonIndex;
+  const slice = rows.slice(0, h+1);
+  const labels = slice.map(r=>r.m);
+
+  // Purchases KPIs
+  const totB = sim.totals.cumBoughtDoes + sim.totals.cumBoughtBucks;
+  $("k_buy_total").textContent = fmtInt(totB);
+  $("k_buy_does").textContent = fmtInt(sim.totals.cumBoughtDoes);
+  $("k_buy_bucks").textContent = fmtInt(sim.totals.cumBoughtBucks);
+
+  // first purchase month
+  let firstPur = null;
+  for(const r of rows){
+    // detect a jump in cumulative bought (beyond starter) by looking at purchase spend in that month
+    if(r.purchaseSpend>0){ firstPur = r.m; break; }
+  }
+  $("k_buy_first").textContent = firstPur===null ? "None" : `Month ${firstPur}`;
+
+  // Purchases chart: cumulative bought
+  chPurch?.destroy();
+  chPurch = makeChart("chartPurchTotal","line",labels,[
+    {label:"Cumulative goats bought", data:slice.map(r=>Math.round(r.cumBought)), borderWidth:3, tension:.25, pointRadius:0}
+  ]);
+
+  // Growth KPIs
+  $("g_reach").textContent = sim.reachedMonth===null ? "No" : "Yes";
+  $("g_time").textContent = sim.reachedMonth===null ? `Not reached by ${p.maxMonths} months` : moFmt(sim.reachedMonth);
+
+  const last = slice[slice.length-1];
+  const util = (last.capacityDoes>0) ? last.eligible/last.capacityDoes : 0;
+  $("g_buck").textContent =
+    (last.capacityDoes===0 && last.breedingDoes>0) ? "No bucks"
+    : (last.eligible > last.capacityDoes) ? "Limiting (add bucks)"
+    : (util>0.85) ? "Tight"
+    : "Healthy";
+
+  // Herd at target total KPI
+  const targetRow = sim.reachedMonth===null ? last : rows[sim.horizonIndex];
+  $("g_herd_target_total").textContent = fmtInt(targetRow.herd);
+
+  // Herd composition chart
+  chHerd?.destroy();
+  chHerd = makeChart("chartHerd","line",labels,[
+    {label:"Breeding does", data:slice.map(r=>Math.round(r.breedingDoes)), borderWidth:2, tension:.25, pointRadius:0, fill:true},
+    {label:"Young females", data:slice.map(r=>Math.round(r.youngF + r.fForSale)), borderWidth:2, tension:.25, pointRadius:0, fill:true},
+    {label:"Bucks", data:slice.map(r=>Math.round(r.bucksActive)), borderWidth:3, tension:.25, pointRadius:0},
+    {label:"Young males", data:slice.map(r=>Math.round(r.youngM)), borderWidth:2, tension:.25, pointRadius:0, fill:true}
+  ],{
+    scales:{
+      x:{ticks:{color:"#111"}, grid:{color:"rgba(0,0,0,.08)"}},
+      y:{ticks:{color:"#111"}, grid:{color:"rgba(0,0,0,.08)"}, beginAtZero:true}
+    }
+  });
+
+  // Constraint chart with bucks on 2nd axis
+  chCons?.destroy();
+  chCons = makeChart("chartConstraint","line",labels,[
+    {label:"Breedable does (eligible)", data:slice.map(r=>Math.round(r.eligible)), borderWidth:3, tension:.25, pointRadius:0, yAxisID:"y"},
+    {label:"Buck capacity (bucks×ratio)", data:slice.map(r=>Math.round(r.capacityDoes)), borderWidth:3, tension:.25, pointRadius:0, borderDash:[6,4], yAxisID:"y"},
+    {label:"Bucks (count)", data:slice.map(r=>Math.round(r.bucksActive)), borderWidth:3, tension:.25, pointRadius:0, yAxisID:"y2"}
+  ],{
+    scales:{
+      y:{type:"linear", position:"left", beginAtZero:true, ticks:{color:"#111"}, grid:{color:"rgba(0,0,0,.08)"}},
+      y2:{type:"linear", position:"right", beginAtZero:true, ticks:{color:"#111"}, grid:{drawOnChartArea:false}}
+    }
+  });
+
+  // Sales Cycle KPIs (Action 2)
+  const maleSoldTot = Math.round(sim.totals.totalMaleSold);
+  const femSoldTot = Math.round(sim.totals.totalFemaleSold);
+  $("s_totalSold").textContent = fmtInt(maleSoldTot + femSoldTot);
+  $("s_maleSold").textContent = fmtInt(maleSoldTot);
+  $("s_femaleSold").textContent = fmtInt(femSoldTot);
+  $("s_firstSale").textContent = sim.totals.firstSaleMonth===null ? "Never" : `Month ${sim.totals.firstSaleMonth}`;
+
+  // Sales by target month / timeframe
+  const idxTarget = sim.horizonIndex;
+  const idxTimeframe = Math.min(rows.length-1, p.timeframe);
+  const sumUpTo = (arrIdx, key)=> rows.slice(0, arrIdx+1).reduce((a,r)=>a + (r[key]||0),0);
+
+  const soldByTarget = Math.round(sumUpTo(idxTarget,"maleSold") + sumUpTo(idxTarget,"femaleSold"));
+  const soldByTime = Math.round(sumUpTo(idxTimeframe,"maleSold") + sumUpTo(idxTimeframe,"femaleSold"));
+  $("s_byTarget").textContent = fmtInt(soldByTarget);
+  $("s_byTimeframe").textContent = fmtInt(soldByTime);
+
+  const avgSales = (idxTarget>0) ? (soldByTarget/(idxTarget+1)) : 0;
+  $("s_avgSales").textContent = `${Math.round(avgSales)} / mo`;
+  $("s_salesNote").textContent = (sim.totals.firstSaleMonth===null) ? "No sales yet"
+    : (sim.totals.firstSaleMonth<=12 ? "Early revenue starts" : "Sales start later (growth first)");
+
+  // Sales chart (Action 2)
+  chSales?.destroy();
+  chSales = makeChart("chartSales","bar",labels,[
+    {label:"Male sold", data:slice.map(r=>Math.round(r.maleSold)), borderWidth:1},
+    {label:"Female sold", data:slice.map(r=>Math.round(r.femaleSold)), borderWidth:1}
+  ],{
+    scales:{ y:{beginAtZero:true} }
+  });
+
+  // Money KPIs
+  const horizonRow = rows[sim.horizonIndex];
+  $("m_revTot").textContent = money(horizonRow.cumRev);
+  $("m_costTot").textContent = money(horizonRow.cumCost);
+
+  $("m_opBE").textContent = sim.opBE===null ? "Never" : `Month ${sim.opBE}`;
+  $("m_fullBE").textContent = sim.fullBE===null ? "Never" : `Month ${sim.fullBE}`;
+
+  // Money charts
+  chCum?.destroy();
+  chCum = makeChart("chartCumRevCost","line",labels,[
+    {label:"Cumulative revenue", data:slice.map(r=>Math.round(r.cumRev)), borderWidth:3, tension:.25, pointRadius:0},
+    {label:"Cumulative costs", data:slice.map(r=>Math.round(r.cumCost)), borderWidth:3, tension:.25, pointRadius:0, borderDash:[5,4]}
+  ]);
+
+  // Monthly net (all-in) — include month 0 startup in net baseline already via cumNet init; we plot monthly net values.
+  const net = slice.map(r=>Math.round(r.net - (r.m===0 ? 0 : 0))); // monthly net already excludes startup because startup is in cumNet init; we keep net as computed
+  // Color segment based on sign
+  chNet?.destroy();
+  chNet = makeChart("chartMonthlyNet","line",labels,[
+    {
+      label:"Monthly net (all-in)",
+      data: net,
+      borderWidth:4,
+      tension:.25,
+      pointRadius:0,
+      segment:{
+        borderColor: ctx => (ctx.p0.parsed.y>=0 && ctx.p1.parsed.y>=0) ? "rgba(0,140,0,.95)" : "rgba(180,0,0,.95)"
+      }
+    }
+  ],{ scales:{ y:{beginAtZero:false} } });
+
+  // Monthly revenue vs operating costs (not including purchases)
+  chMo?.destroy();
+  chMo = makeChart("chartMonthlyRevCost","line",labels,[
+    {label:"Monthly revenue", data:slice.map(r=>Math.round(r.revenue)), borderWidth:3, tension:.25, pointRadius:0},
+    {label:"Operating cost", data:slice.map(r=>Math.round(r.opCost)), borderWidth:3, tension:.25, pointRadius:0, borderDash:[6,4]}
+  ],{ scales:{ y:{beginAtZero:true} } });
+
+  // Snapshot KPIs
+  $("x_time").textContent = sim.reachedMonth===null ? "Not reached" : moFmt(sim.reachedMonth);
+  $("x_conf").textContent = `—`; // Monte Carlo not included in this MK2 build (you can add later)
+  $("x_netTarget").textContent = money(horizonRow.cumNet);
+  const compText =
+    `Total ${fmtInt(horizonRow.herd)} | Does ${fmtInt(horizonRow.breedingDoes)} | Bucks ${fmtInt(horizonRow.bucksActive)} | YoungF ${fmtInt(horizonRow.youngF + horizonRow.fForSale)} | YoungM ${fmtInt(horizonRow.youngM)}`;
+  $("x_compTarget").textContent = compText;
+
+  // Waterfall-style (stacked bars) summary
+  const totalRev = horizonRow.cumRev;
+  const totalCost = horizonRow.cumCost;
+  const netPos = horizonRow.cumNet;
+
+  chWF?.destroy();
+  chWF = makeChart("chartWaterfall","bar",["Horizon"],[
+    {label:"Total Revenue", data:[Math.round(totalRev)], borderWidth:1},
+    {label:"Total Costs", data:[Math.round(totalCost)], borderWidth:1},
+    {label:"Net Position", data:[Math.round(netPos)], borderWidth:1}
+  ],{ scales:{ y:{beginAtZero:true} } });
+
+  // Advisory
+  $("advBox").innerHTML = buildAdvice(p, sim);
+
+  // Save messages reset
+  $("saveMsg").style.display="none";
+  $("loadMsg").style.display="none";
 }
-function closeModal(){
-  $("modalBack").style.display="none";
-}
-$("closeModal").onclick = closeModal;
-$("modalBack").addEventListener("click",(e)=>{
-  if(e.target.id==="modalBack") closeModal();
+
+/* -------------------- run button -------------------- */
+$("runBtn").addEventListener("click", run);
+
+/* font size live */
+$("fontSize").addEventListener("input", ()=>{
+  document.documentElement.style.setProperty("--fs", $("fontSize").value + "px");
 });
 
-$("saveBtn").onclick = ()=>{
-  const name = ($("scName").value||"scenario").trim().replaceAll(" ","_");
+/* -------------------- save / load handlers -------------------- */
+$("btnSave").addEventListener("click", ()=>{
+  const name = ($("scName").value || "scenario").trim().replace(/[^\w\-]+/g,"_");
   const data = getAllInputs();
-  const blob = new Blob([JSON.stringify(data,null,2)], {type:"application/json"});
+  const blob = new Blob([JSON.stringify({name, data}, null, 2)], {type:"application/json"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = `${name}.json`;
-  document.body.appendChild(a);
   a.click();
-  a.remove();
-  openModal();
-};
+  URL.revokeObjectURL(a.href);
 
-$("loadBtn").onclick = ()=>{
-  const f = $("loadFile").files?.[0];
-  if(!f){ alert("Choose a .json scenario file first."); return; }
-  const reader = new FileReader();
-  reader.onload = ()=>{
-    try{
-      const obj = JSON.parse(reader.result);
-      applyInputs(obj);
-      render();
-    }catch(e){
-      alert("Could not load file. Make sure it's a valid scenario JSON.");
-    }
-  };
-  reader.readAsText(f);
-};
+  const box = $("saveMsg");
+  box.style.display="block";
+  box.className="banner small good";
+  box.textContent = `Saved: ${name}.json (downloaded).`;
+});
 
-/* =========================
-   Run button spinner (1.5s) + render
-========================= */
-$("runBtn").onclick = ()=>{
-  const sp = $("spin");
-  sp.style.display="block";
-  // keep stable 1.5s
-  setTimeout(()=>{
-    try{ render(); }
-    catch(e){
-      console.error(e);
-      alert("A script error stopped charts. Open Console (F12) and share the first red error line.");
-    }
-    sp.style.display="none";
-  }, 1500);
-};
+$("fileLoad").addEventListener("change", async (e)=>{
+  const file = e.target.files?.[0];
+  if(!file) return;
+  try{
+    const txt = await file.text();
+    loadedScenario = JSON.parse(txt);
+    const box = $("loadMsg");
+    box.style.display="block";
+    box.className="banner small warn";
+    box.textContent = `Loaded file: ${(loadedScenario.name||file.name)}. Click “Apply loaded scenario”.`;
+  }catch(err){
+    const box = $("loadMsg");
+    box.style.display="block";
+    box.className="banner small bad";
+    box.textContent = `Could not read JSON.`;
+    loadedScenario = null;
+  }
+});
 
-/* =========================
-   Initial render
-========================= */
-try{
-  totalBoughtKPIs();
-  render();
-}catch(e){
-  console.error(e);
-}
+$("btnApplyLoad").addEventListener("click", ()=>{
+  if(!loadedScenario?.data){
+    const box = $("loadMsg");
+    box.style.display="block";
+    box.className="banner small bad";
+    box.textContent = `No scenario loaded yet.`;
+    return;
+  }
+  applyAllInputs(loadedScenario.data);
+
+  const box = $("loadMsg");
+  box.style.display="block";
+  box.className="banner small good";
+  box.textContent = `Applied scenario inputs. Now click Run.`;
+});
+
+/* -------------------- initial render -------------------- */
+run();
 </script>
 </body>
 </html>
