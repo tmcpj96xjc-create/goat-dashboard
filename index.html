@@ -105,7 +105,7 @@
     </div>
   </div>
 
-  <!-- Tabs (requested order with Sales Cycle after Goat Growth) -->
+  <!-- Tabs -->
   <div class="tabs">
     <button class="tabBtn active" data-tab="tabPurch">Purchases</button>
     <button class="tabBtn" data-tab="tabGrowth">Goat Growth</button>
@@ -219,7 +219,6 @@
     <div class="card">
       <b class="small">Breeding settings</b>
 
-      <!-- Action 1: Growth mode toggles -->
       <div class="pillGroup" aria-label="Growth presets">
         <label class="pill" title="Faster herd build; tighter cycles; higher retention.">
           <input type="radio" name="growthMode" id="modeAgg" />
@@ -248,7 +247,6 @@
             <input id="kidsPerBirth" type="number" value="1.8" min="1" max="3.5" step="0.1" />
           </div>
 
-          <!-- Action 1: re-breed delay input -->
           <div class="row">
             <label title="After a doe gives birth, she must wait this many months before she can conceive again.">Re-breed delay (months)</label>
             <input id="rebreedDelay" type="number" value="3" min="0" max="12" />
@@ -316,7 +314,7 @@
     </div>
   </div>
 
-  <!-- Sales Cycle (Action 2) -->
+  <!-- Sales Cycle -->
   <div id="tabSales" class="tab">
     <div class="card">
       <b class="small">Sales Cycle</b>
@@ -481,7 +479,7 @@
     </div>
   </div>
 
-</div> <!-- /wrap -->
+</div>
 
 <script>
 /* -------------------- helpers -------------------- */
@@ -513,20 +511,8 @@ function moFmt(mo){
 
 /* -------------------- Action 1: presets -------------------- */
 const PRESET = {
-  aggressive: {
-    kiddingInt: 9,
-    breedSuccess: 93,
-    kidsPerBirth: 1.9,
-    rebreedDelay: 2,
-    retainF: 95
-  },
-  conservative: {
-    kiddingInt: 12,
-    breedSuccess: 90,
-    kidsPerBirth: 1.8,
-    rebreedDelay: 3,
-    retainF: 85
-  }
+  aggressive: { kiddingInt: 9,  breedSuccess: 93, kidsPerBirth: 1.9, rebreedDelay: 2, retainF: 95 },
+  conservative:{ kiddingInt: 12, breedSuccess: 90, kidsPerBirth: 1.8, rebreedDelay: 3, retainF: 85 }
 };
 function applyPreset(name){
   const p = PRESET[name];
@@ -539,26 +525,21 @@ function applyPreset(name){
 $("modeAgg").addEventListener("change", ()=>{ if($("modeAgg").checked) applyPreset("aggressive"); });
 $("modeCon").addEventListener("change", ()=>{ if($("modeCon").checked) applyPreset("conservative"); });
 
-/* -------------------- fixed biology (Action 1) -------------------- */
-const FIX_GEST = 5;          // 150 days ~ 5 months
-const FIX_FIRST_TRY = 8;     // retained doe first-try age fixed at 8 months
+/* -------------------- fixed biology -------------------- */
+const FIX_GEST = 5;
+const FIX_FIRST_TRY = 8;
 const FIX_FEMALE_SALE_AGE = 6;
 
 /* -------------------- purchases schedule -------------------- */
-const PURCHASE_MONTHS = new Set([4,8,12,16,20,24,28]); // months since start
 function purchAtMonth(m){
-  // m is 0-based month index, but UI is 1-based human months.
-  const mm = m; // keep as 0-based internal
-  const human = mm; // month number in UI is same as internal count for these specific fixed purchases
-  // our purchase months are expressed as "month 4" meaning after 4 months from start => internal m==4
   let d=0,b=0;
-  if(human===4){ d=N("p4d"); b=N("p4b"); }
-  else if(human===8){ d=N("p8d"); b=N("p8b"); }
-  else if(human===12){ d=N("p12d"); b=N("p12b"); }
-  else if(human===16){ d=N("p16d"); b=N("p16b"); }
-  else if(human===20){ d=N("p20d"); b=N("p20b"); }
-  else if(human===24){ d=N("p24d"); b=N("p24b"); }
-  else if(human===28){ d=N("p28d"); b=N("p28b"); }
+  if(m===4){ d=N("p4d"); b=N("p4b"); }
+  else if(m===8){ d=N("p8d"); b=N("p8b"); }
+  else if(m===12){ d=N("p12d"); b=N("p12b"); }
+  else if(m===16){ d=N("p16d"); b=N("p16b"); }
+  else if(m===20){ d=N("p20d"); b=N("p20b"); }
+  else if(m===24){ d=N("p24d"); b=N("p24b"); }
+  else if(m===28){ d=N("p28d"); b=N("p28b"); }
   return {d,b};
 }
 
@@ -581,13 +562,11 @@ function getParams(){
   const retainF = clamp(N("retainF"), 0, 100) / 100;
   const maleSaleAge = clamp(N("maleSaleAge"), 1, 12);
 
-  // starting herd
   const startYoungDoes = clamp(N("startYoungDoes"), 0, 999999);
   const startYoungBucks = clamp(N("startYoungBucks"), 0, 999999);
   const startAdultDoes = clamp(N("startAdultDoes"), 0, 999999);
   const startAdultBucks = clamp(N("startAdultBucks"), 0, 999999);
 
-  // money
   const buyYoungDoe = N("buyYoungDoe"), buyYoungBuck=N("buyYoungBuck");
   const buyAdultDoe = N("buyAdultDoe"), buyAdultBuck=N("buyAdultBuck");
   const sellMale=N("sellMale"), sellFemale=N("sellFemale");
@@ -608,46 +587,28 @@ function getParams(){
   };
 }
 
-/* -------------------- simulation core --------------------
-State we track (whole-number approach via rounding at outputs):
-- breedingDoes: adult does in the breeding pool (some pregnant, some resting)
-- bucksActive: adult bucks (service)
-- young females (retained) pipeline until 8 months first-try age
-- pregnancies pipeline (5 months) counted by does that conceived
-- post-kidding rest pipeline (rebreedDelay) counted by does resting
-- kids pipelines for sales (male to sale age, female to 6 months if not retained)
-- sales events per month (Action 2)
-- money: month 0 startup purchase + monthly net
----------------------------------------------------------- */
-
+/* -------------------- simulation (fixed pipelines) -------------------- */
 function simulate(p){
   const rows=[];
 
-  // Age pipelines (counts can be fractional; we round at chart time)
-  const fRetCoh = Array(FIX_FIRST_TRY).fill(0);       // retained females age 0..7 months
-  const mCoh = Array(p.maleSaleAge).fill(0);          // male kids age 0..saleAge-1
-  const fSaleCoh = Array(FIX_FEMALE_SALE_AGE).fill(0);// female kids sold at 6 months
+  const fRetCoh = Array(FIX_FIRST_TRY).fill(0);
+  const mCoh = Array(p.maleSaleAge).fill(0);
+  const fSaleCoh = Array(FIX_FEMALE_SALE_AGE).fill(0);
 
-  // Pregnancy + rest pipelines (counts of does in those states)
-  const preg = Array(FIX_GEST).fill(0);               // 0..4 months pregnant
-  const rest = Array(p.rebreedDelay).fill(0);         // 0..delay-1 months resting after kidding
+  const preg = Array(FIX_GEST).fill(0);
+  const rest = Array(p.rebreedDelay).fill(0);
 
-  // Starter “young” goats maturity: they start at 3 months old.
-  // They must reach 8 months to first-try => 5 months on farm before eligible to conceive.
-  const youngStarterF = Array(5).fill(0); // months remaining until they enter retained pipeline at age 8 (directly into breeding pool as eligible)
-  const youngStarterM = Array(5).fill(0); // months remaining until buck becomes active
+  const youngStarterF = Array(5).fill(0);
+  const youngStarterM = Array(5).fill(0);
   youngStarterF[0] = p.startYoungDoes;
   youngStarterM[0] = p.startYoungBucks;
 
-  // Adult starters: eligible after a 1-month buffer (your later preference, kept simple here)
-  const adultBuffer = [0]; // 1 month buffer => shift into active at month 1
   let adultBufferDoes = p.startAdultDoes;
   let adultBufferBucks = p.startAdultBucks;
 
   let breedingDoes = 0;
   let bucksActive = 0;
 
-  // Money
   const startupSpend =
     p.startYoungDoes*p.buyYoungDoe +
     p.startYoungBucks*p.buyYoungBuck +
@@ -655,57 +616,44 @@ function simulate(p){
     p.startAdultBucks*p.buyAdultBuck;
 
   let cumRev=0, cumCost=0;
-  let cumNet = -startupSpend;       // include month 0 purchases
+  let cumNet = -startupSpend;
   let opBE = null, fullBE = null;
 
-  // Sales counters (Action 2)
   let totalMaleSold=0, totalFemaleSold=0;
   let firstSaleMonth = null;
 
-  // Purchases tracking
   let cumBoughtDoes = p.startYoungDoes + p.startAdultDoes;
   let cumBoughtBucks = p.startYoungBucks + p.startAdultBucks;
-  const purchCum = []; // cumulative bought total per month for Purchases chart
 
-  // For horizon (stop at target or max)
   let reachedMonth = null;
   let targetIndex = null;
 
-  // Helper: herd on-farm inventory = breeding does + bucks + all kids being held + in pipelines
-  function herdTotal(){
-    const youngF = fRetCoh.reduce((a,b)=>a+b,0);
-    const maleKids = mCoh.reduce((a,b)=>a+b,0);
-    const femaleForSale = fSaleCoh.reduce((a,b)=>a+b,0);
-    const pregTot = preg.reduce((a,b)=>a+b,0);
-    const restTot = rest.reduce((a,b)=>a+b,0);
+  function sum(arr){ return arr.reduce((a,b)=>a+b,0); }
 
-    const startersF = youngStarterF.reduce((a,b)=>a+b,0);
-    const startersM = youngStarterM.reduce((a,b)=>a+b,0);
-    const adultsWaiting = adultBufferDoes + adultBufferBucks;
-
-    // breedingDoes already includes pregnant/resting does; we avoid double counting by using breedingDoes, not preg/rest totals separately.
-    return (breedingDoes + bucksActive + youngF + maleKids + femaleForSale + startersF + startersM + adultsWaiting);
-  }
-
-  // We treat breeding eligibility:
-  // eligible does = breedingDoes - pregnant - resting
   function eligibleDoes(){
-    const pregTot = preg.reduce((a,b)=>a+b,0);
-    const restTot = rest.reduce((a,b)=>a+b,0);
+    const pregTot = sum(preg);
+    const restTot = sum(rest);
     return Math.max(0, breedingDoes - pregTot - restTot);
   }
 
-  // Costs are charged on all goats on farm (inventory)
+  function herdTotal(){
+    const youngF = sum(fRetCoh);
+    const maleKids = sum(mCoh);
+    const femaleForSale = sum(fSaleCoh);
+
+    const startersF = sum(youngStarterF);
+    const startersM = sum(youngStarterM);
+    const adultsWaiting = adultBufferDoes + adultBufferBucks;
+
+    return (breedingDoes + bucksActive + youngF + maleKids + femaleForSale + startersF + startersM + adultsWaiting);
+  }
+
   function monthlyOperatingCost(inv){
     return inv * (p.feed + p.med + p.othVar) + p.fixedMo;
   }
 
-  // month loop
   for(let m=0; m<=p.maxMonths; m++){
-    // month 0: startup already applied to cumNet; we still record a row at m=0 (pre-dynamics)
-    // Dynamics start at m=0 as "first month on farm".
-
-    // 1) move adult starters from buffer to active after 1 month
+    // adult starters become active after 1-month buffer
     if(m===1){
       breedingDoes += adultBufferDoes;
       bucksActive += adultBufferBucks;
@@ -713,103 +661,81 @@ function simulate(p){
       adultBufferBucks = 0;
     }
 
-    // 2) advance young starter maturity pipelines (5 months to become eligible)
-    // For does: after 5 months on farm, they are effectively at 8 months => can join breeding pool (as eligible)
+    // mature young starters (5 months on-farm)
     const starterFOut = youngStarterF[youngStarterF.length-1] || 0;
     for(let i=youngStarterF.length-1;i>=1;i--) youngStarterF[i]=youngStarterF[i-1];
     youngStarterF[0]=0;
-    if(starterFOut>0){
-      breedingDoes += starterFOut;
-    }
+    breedingDoes += starterFOut;
 
-    // For bucks: after 5 months on farm they become active service bucks
     const starterMOut = youngStarterM[youngStarterM.length-1] || 0;
     for(let i=youngStarterM.length-1;i>=1;i--) youngStarterM[i]=youngStarterM[i-1];
     youngStarterM[0]=0;
-    if(starterMOut>0){
-      bucksActive += starterMOut;
-    }
+    bucksActive += starterMOut;
 
-    // 3) expansion purchases this month
+    // purchases (young)
     const pur = purchAtMonth(m);
     if(pur.d || pur.b){
-      // treat as young purchases: add to youngStarter pipelines (they are “young on farm”)
-      if(youngStarterF.length>0) youngStarterF[0] += pur.d;
-      if(youngStarterM.length>0) youngStarterM[0] += pur.b;
-
+      youngStarterF[0] += pur.d;
+      youngStarterM[0] += pur.b;
       cumBoughtDoes += pur.d;
       cumBoughtBucks += pur.b;
     }
 
-    purchCum.push(cumBoughtDoes + cumBoughtBucks);
+    // ---- PIPELINES: shift first, then add new events ----
 
-    // 4) breeding attempt occurs on a schedule (every kiddingInt months)
-    // Eligible does at month m attempt, limited by buck capacity.
+    // pregnancy: shift forward, and capture births coming off the end
+    const birthDoes = preg[preg.length-1] || 0;
+    for(let i=preg.length-1;i>=1;i--) preg[i]=preg[i-1];
+    preg[0]=0; // will add new conceptions below
+
+    // rest: shift forward (does finishing rest simply become eligible again automatically)
+    if(rest.length){
+      for(let i=rest.length-1;i>=1;i--) rest[i]=rest[i-1];
+      rest[0]=0; // will add new postpartum rest below
+    }
+
+    // births
+    let birthsKids = 0;
+    if(birthDoes>0){
+      birthsKids = birthDoes * p.kidsPerBirth * p.kidSurvival;
+      if(rest.length) rest[0] += birthDoes; // postpartum rest starts now
+    }
+    const fBorn = birthsKids * p.pctFemale;
+    const mBorn = birthsKids - fBorn;
+
+    // newborn allocation
+    const fRet = fBorn * p.retainF;
+    const fSale = fBorn - fRet;
+    if(fRetCoh.length) fRetCoh[0] += fRet;
+    if(mCoh.length) mCoh[0] += mBorn;
+    if(fSaleCoh.length) fSaleCoh[0] += fSale;
+
+    // retained females age up; after 8 months join breeding pool
+    const toBreeding = fRetCoh[fRetCoh.length-1] || 0;
+    for(let i=fRetCoh.length-1;i>=1;i--) fRetCoh[i]=fRetCoh[i-1];
+    fRetCoh[0]=0;
+    breedingDoes += toBreeding;
+
+    // breeding attempt (kidding cycle)
     let conceptions = 0;
     if(m>0 && (m % p.kiddingInt === 0)){
       const elig = eligibleDoes();
       const capacity = bucksActive * p.doesPerBuck;
       const attempted = Math.min(elig, capacity);
       conceptions = attempted * p.breedSuccess;
-
-      // place conceptions into pregnancy month 0
       preg[0] += conceptions;
     }
 
-    // 5) advance pregnancy pipeline, produce births at end
-    const birthDoes = preg[preg.length-1] || 0;
-    for(let i=preg.length-1;i>=1;i--) preg[i]=preg[i-1];
-    preg[0]=0; // new conceptions already added above; we keep it 0 here because we used preg[0]+=conceptions before shift
-    // Correction: we already shifted. So restore conceptions into preg[0] after shift:
-    preg[0] += conceptions;
-
-    // births happen from does that were at last gestation bucket
-    let birthsKids = 0;
-    if(birthDoes>0){
-      birthsKids = birthDoes * p.kidsPerBirth * p.kidSurvival;
-    }
-
-    const fBorn = birthsKids * p.pctFemale;
-    const mBorn = birthsKids - fBorn;
-
-    // 6) after kidding, does enter rest pipeline (rebreedDelay)
-    if(p.rebreedDelay>0 && birthDoes>0){
-      rest[0] += birthDoes;
-    }
-
-    // advance rest pipeline: when rest ends, does become eligible again (they remain in breedingDoes; this just reduces resting count)
-    if(p.rebreedDelay>0){
-      for(let i=rest.length-1;i>=1;i--) rest[i]=rest[i-1];
-      rest[0]=0;
-    }
-
-    // 7) allocate female kids: retain vs sell at 6 months
-    const fRet = fBorn * p.retainF;
-    const fSale = fBorn - fRet;
-
-    // push into cohorts
-    if(fRetCoh.length>0) fRetCoh[0] += fRet;
-    if(mCoh.length>0) mCoh[0] += mBorn;
-    if(fSaleCoh.length>0) fSaleCoh[0] += fSale;
-
-    // advance retained female cohort; after 8 months they join breeding pool
-    const toBreeding = fRetCoh[fRetCoh.length-1] || 0;
-    for(let i=fRetCoh.length-1;i>=1;i--) fRetCoh[i]=fRetCoh[i-1];
-    fRetCoh[0]=0;
-    if(toBreeding>0){
-      breedingDoes += toBreeding;
-    }
-
-    // 8) sales events
+    // sales: age up cohorts and sell at end bucket
     let maleSold = 0;
-    if(mCoh.length>0){
+    if(mCoh.length){
       maleSold = mCoh[mCoh.length-1] || 0;
       for(let i=mCoh.length-1;i>=1;i--) mCoh[i]=mCoh[i-1];
       mCoh[0]=0;
     }
 
     let femaleSold = 0;
-    if(fSaleCoh.length>0){
+    if(fSaleCoh.length){
       femaleSold = fSaleCoh[fSaleCoh.length-1] || 0;
       for(let i=fSaleCoh.length-1;i>=1;i--) fSaleCoh[i]=fSaleCoh[i-1];
       fSaleCoh[0]=0;
@@ -821,49 +747,33 @@ function simulate(p){
     totalMaleSold += maleSold;
     totalFemaleSold += femaleSold;
 
-    // 9) money this month (month 0 includes only startup spend, but we still compute ops costs & revenue if any)
+    // money
     const inv = herdTotal();
     const opCost = monthlyOperatingCost(inv);
-
-    // purchase spend this month (expansion only; startup already counted)
     const purchaseSpend = (pur.d*p.buyYoungDoe) + (pur.b*p.buyYoungBuck);
     const revenue = (maleSold * p.sellMale) + (femaleSold * p.sellFemale);
+    const net = revenue - opCost - purchaseSpend;
 
-    // update cumulative
     cumRev += revenue;
     cumCost += (opCost + purchaseSpend);
-
-    const net = revenue - opCost - purchaseSpend;
-    // month 0 net includes startup cost by having cumNet initialized negative already; we still add month net now:
     cumNet += net;
 
     if(opBE===null && revenue >= opCost) opBE = m;
     if(fullBE===null && cumNet >= 0) fullBE = m;
 
-    // 10) record row
-    const pregTot = preg.reduce((a,b)=>a+b,0);
-    const restTot = rest.reduce((a,b)=>a+b,0);
-
-    const youngF = fRetCoh.reduce((a,b)=>a+b,0);
-    const youngM = mCoh.reduce((a,b)=>a+b,0);
-    const fForSale = fSaleCoh.reduce((a,b)=>a+b,0);
-
     const herd = inv;
     const capacityDoes = bucksActive * p.doesPerBuck;
-    const elig = eligibleDoes();
 
     rows.push({
       m,
       herd,
       breedingDoes,
       bucksActive,
-      youngF,
-      youngM,
-      fForSale,
-      eligible: elig,
+      youngF: sum(fRetCoh),
+      youngM: sum(mCoh),
+      fForSale: sum(fSaleCoh),
+      eligible: eligibleDoes(),
       capacityDoes,
-      pregnant: pregTot,
-      resting: restTot,
       maleSold,
       femaleSold,
       revenue,
@@ -878,7 +788,6 @@ function simulate(p){
       cumBoughtBucks
     });
 
-    // stop when hit target for clarity
     if(reachedMonth===null && herd >= p.target){
       reachedMonth = m;
       targetIndex = rows.length-1;
@@ -886,7 +795,6 @@ function simulate(p){
     }
   }
 
-  // determine horizon index for charts if target not reached
   const horizonIndex = (targetIndex!==null) ? targetIndex : Math.min(rows.length-1, p.maxMonths);
   return {
     rows,
@@ -964,17 +872,12 @@ let loadedScenario=null;
 
 function getAllInputs(){
   const ids=[
-    // global
     "target","timeframe","maxMonths","fontSize",
-    // purchases
     "startYoungDoes","startYoungBucks","startAdultDoes","startAdultBucks",
     "p4d","p4b","p8d","p8b","p12d","p12b","p16d","p16b","p20d","p20b","p24d","p24b","p28d","p28b",
-    // growth
     "kiddingInt","breedSuccess","kidsPerBirth","rebreedDelay","pctFemale","kidSurvival","doesPerBuck","retainF","maleSaleAge",
-    // money
     "cur","buyYoungDoe","buyYoungBuck","buyAdultDoe","buyAdultBuck","sellMale","sellFemale",
     "feed","med","othVar","propYr","laborMo","vetMo","secMo","trMo","adMo",
-    // mode
     "modeAgg","modeCon"
   ];
   const out={};
@@ -997,7 +900,6 @@ function applyAllInputs(obj){
 
 /* -------------------- render -------------------- */
 function run(){
-  // font size
   document.documentElement.style.setProperty("--fs", $("fontSize").value + "px");
 
   const p = getParams();
@@ -1015,15 +917,10 @@ function run(){
   $("k_buy_does").textContent = fmtInt(sim.totals.cumBoughtDoes);
   $("k_buy_bucks").textContent = fmtInt(sim.totals.cumBoughtBucks);
 
-  // first purchase month
   let firstPur = null;
-  for(const r of rows){
-    // detect a jump in cumulative bought (beyond starter) by looking at purchase spend in that month
-    if(r.purchaseSpend>0){ firstPur = r.m; break; }
-  }
+  for(const r of rows){ if(r.purchaseSpend>0){ firstPur = r.m; break; } }
   $("k_buy_first").textContent = firstPur===null ? "None" : `Month ${firstPur}`;
 
-  // Purchases chart: cumulative bought
   chPurch?.destroy();
   chPurch = makeChart("chartPurchTotal","line",labels,[
     {label:"Cumulative goats bought", data:slice.map(r=>Math.round(r.cumBought)), borderWidth:3, tension:.25, pointRadius:0}
@@ -1041,25 +938,16 @@ function run(){
     : (util>0.85) ? "Tight"
     : "Healthy";
 
-  // Herd at target total KPI
-  const targetRow = sim.reachedMonth===null ? last : rows[sim.horizonIndex];
-  $("g_herd_target_total").textContent = fmtInt(targetRow.herd);
+  $("g_herd_target_total").textContent = fmtInt(last.herd);
 
-  // Herd composition chart
   chHerd?.destroy();
   chHerd = makeChart("chartHerd","line",labels,[
     {label:"Breeding does", data:slice.map(r=>Math.round(r.breedingDoes)), borderWidth:2, tension:.25, pointRadius:0, fill:true},
     {label:"Young females", data:slice.map(r=>Math.round(r.youngF + r.fForSale)), borderWidth:2, tension:.25, pointRadius:0, fill:true},
     {label:"Bucks", data:slice.map(r=>Math.round(r.bucksActive)), borderWidth:3, tension:.25, pointRadius:0},
     {label:"Young males", data:slice.map(r=>Math.round(r.youngM)), borderWidth:2, tension:.25, pointRadius:0, fill:true}
-  ],{
-    scales:{
-      x:{ticks:{color:"#111"}, grid:{color:"rgba(0,0,0,.08)"}},
-      y:{ticks:{color:"#111"}, grid:{color:"rgba(0,0,0,.08)"}, beginAtZero:true}
-    }
-  });
+  ],{ scales:{ y:{beginAtZero:true} } });
 
-  // Constraint chart with bucks on 2nd axis
   chCons?.destroy();
   chCons = makeChart("chartConstraint","line",labels,[
     {label:"Breedable does (eligible)", data:slice.map(r=>Math.round(r.eligible)), borderWidth:3, tension:.25, pointRadius:0, yAxisID:"y"},
@@ -1067,12 +955,12 @@ function run(){
     {label:"Bucks (count)", data:slice.map(r=>Math.round(r.bucksActive)), borderWidth:3, tension:.25, pointRadius:0, yAxisID:"y2"}
   ],{
     scales:{
-      y:{type:"linear", position:"left", beginAtZero:true, ticks:{color:"#111"}, grid:{color:"rgba(0,0,0,.08)"}},
-      y2:{type:"linear", position:"right", beginAtZero:true, ticks:{color:"#111"}, grid:{drawOnChartArea:false}}
+      y:{type:"linear", position:"left", beginAtZero:true},
+      y2:{type:"linear", position:"right", beginAtZero:true, grid:{drawOnChartArea:false}}
     }
   });
 
-  // Sales Cycle KPIs (Action 2)
+  // Sales KPIs
   const maleSoldTot = Math.round(sim.totals.totalMaleSold);
   const femSoldTot = Math.round(sim.totals.totalFemaleSold);
   $("s_totalSold").textContent = fmtInt(maleSoldTot + femSoldTot);
@@ -1080,7 +968,6 @@ function run(){
   $("s_femaleSold").textContent = fmtInt(femSoldTot);
   $("s_firstSale").textContent = sim.totals.firstSaleMonth===null ? "Never" : `Month ${sim.totals.firstSaleMonth}`;
 
-  // Sales by target month / timeframe
   const idxTarget = sim.horizonIndex;
   const idxTimeframe = Math.min(rows.length-1, p.timeframe);
   const sumUpTo = (arrIdx, key)=> rows.slice(0, arrIdx+1).reduce((a,r)=>a + (r[key]||0),0);
@@ -1095,38 +982,37 @@ function run(){
   $("s_salesNote").textContent = (sim.totals.firstSaleMonth===null) ? "No sales yet"
     : (sim.totals.firstSaleMonth<=12 ? "Early revenue starts" : "Sales start later (growth first)");
 
-  // Sales chart (Action 2)
   chSales?.destroy();
   chSales = makeChart("chartSales","bar",labels,[
     {label:"Male sold", data:slice.map(r=>Math.round(r.maleSold)), borderWidth:1},
     {label:"Female sold", data:slice.map(r=>Math.round(r.femaleSold)), borderWidth:1}
-  ],{
-    scales:{ y:{beginAtZero:true} }
-  });
+  ],{ scales:{ y:{beginAtZero:true} } });
 
   // Money KPIs
   const horizonRow = rows[sim.horizonIndex];
   $("m_revTot").textContent = money(horizonRow.cumRev);
   $("m_costTot").textContent = money(horizonRow.cumCost);
-
   $("m_opBE").textContent = sim.opBE===null ? "Never" : `Month ${sim.opBE}`;
   $("m_fullBE").textContent = sim.fullBE===null ? "Never" : `Month ${sim.fullBE}`;
 
-  // Money charts
   chCum?.destroy();
   chCum = makeChart("chartCumRevCost","line",labels,[
     {label:"Cumulative revenue", data:slice.map(r=>Math.round(r.cumRev)), borderWidth:3, tension:.25, pointRadius:0},
     {label:"Cumulative costs", data:slice.map(r=>Math.round(r.cumCost)), borderWidth:3, tension:.25, pointRadius:0, borderDash:[5,4]}
   ]);
 
-  // Monthly net (all-in) — include month 0 startup in net baseline already via cumNet init; we plot monthly net values.
-  const net = slice.map(r=>Math.round(r.net - (r.m===0 ? 0 : 0))); // monthly net already excludes startup because startup is in cumNet init; we keep net as computed
-  // Color segment based on sign
+  // Monthly net ALL-IN: include startup spend at month 0 as a net hit
+  const netAllIn = slice.map(r=>{
+    const base = r.net;
+    const extra = (r.m===0) ? (-sim.startupSpend) : 0;
+    return Math.round(base + extra);
+  });
+
   chNet?.destroy();
   chNet = makeChart("chartMonthlyNet","line",labels,[
     {
       label:"Monthly net (all-in)",
-      data: net,
+      data: netAllIn,
       borderWidth:4,
       tension:.25,
       pointRadius:0,
@@ -1136,7 +1022,6 @@ function run(){
     }
   ],{ scales:{ y:{beginAtZero:false} } });
 
-  // Monthly revenue vs operating costs (not including purchases)
   chMo?.destroy();
   chMo = makeChart("chartMonthlyRevCost","line",labels,[
     {label:"Monthly revenue", data:slice.map(r=>Math.round(r.revenue)), borderWidth:3, tension:.25, pointRadius:0},
@@ -1145,8 +1030,9 @@ function run(){
 
   // Snapshot KPIs
   $("x_time").textContent = sim.reachedMonth===null ? "Not reached" : moFmt(sim.reachedMonth);
-  $("x_conf").textContent = `—`; // Monte Carlo not included in this MK2 build (you can add later)
+  $("x_conf").textContent = `—`;
   $("x_netTarget").textContent = money(horizonRow.cumNet);
+
   const compText =
     `Total ${fmtInt(horizonRow.herd)} | Does ${fmtInt(horizonRow.breedingDoes)} | Bucks ${fmtInt(horizonRow.bucksActive)} | YoungF ${fmtInt(horizonRow.youngF + horizonRow.fForSale)} | YoungM ${fmtInt(horizonRow.youngM)}`;
   $("x_compTarget").textContent = compText;
@@ -1163,18 +1049,14 @@ function run(){
     {label:"Net Position", data:[Math.round(netPos)], borderWidth:1}
   ],{ scales:{ y:{beginAtZero:true} } });
 
-  // Advisory
   $("advBox").innerHTML = buildAdvice(p, sim);
 
-  // Save messages reset
   $("saveMsg").style.display="none";
   $("loadMsg").style.display="none";
 }
 
 /* -------------------- run button -------------------- */
 $("runBtn").addEventListener("click", run);
-
-/* font size live */
 $("fontSize").addEventListener("input", ()=>{
   document.documentElement.style.setProperty("--fs", $("fontSize").value + "px");
 });
