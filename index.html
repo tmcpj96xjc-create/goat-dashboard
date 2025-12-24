@@ -1296,6 +1296,14 @@ chPurch = makeChart("chartPurchTotal","line",labels,[
     pointRadius:0,
     borderDash:[6,4]
   }
+ {
+    label:"Target herd size",
+    data:labels.map(()=>Math.round(p.target)),
+    borderWidth:2,
+    pointRadius:0,
+    borderDash:[2,6]
+  }
+  
 ],{
   scales:{ y:{beginAtZero:true} }
 });
