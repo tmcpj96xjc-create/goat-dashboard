@@ -1278,11 +1278,27 @@ function runCore(){
   }
   $("k_buy_first").textContent = firstPur===null ? "None" : `Month ${firstPur}`;
 
-  // Purchases chart
-  chPurch?.destroy();
-  chPurch = makeChart("chartPurchTotal","line",labels,[
-    {label:"Cumulative goats bought", data:slice.map(r=>Math.round(r.cumBought)), borderWidth:3, tension:.25, pointRadius:0}
-  ],{ scales:{ y:{beginAtZero:true} } });
+  /// Purchases chart (purchases vs actual herd growth)
+chPurch?.destroy();
+chPurch = makeChart("chartPurchTotal","line",labels,[
+  {
+    label:"Cumulative goats bought",
+    data:slice.map(r=>Math.round(r.cumBought)),
+    borderWidth:3,
+    tension:.25,
+    pointRadius:0
+  },
+  {
+    label:"Total herd on farm",
+    data:slice.map(r=>Math.round(r.herd)),
+    borderWidth:3,
+    tension:.25,
+    pointRadius:0,
+    borderDash:[6,4]
+  }
+],{
+  scales:{ y:{beginAtZero:true} }
+});
 
   // Constraint chart
   chCons?.destroy();
